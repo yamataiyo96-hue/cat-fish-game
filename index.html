@@ -2,610 +2,897 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>seronreOS mini</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ねこと一緒！1000匹フィッシングポンド</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+            touch-action: none;
             user-select: none;
+            -webkit-user-select: none;
         }
         body, html {
+            margin: 0;
+            padding: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #111;
+            background-color: #020b10;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
-        /* 起動画面 */
-        #boot-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.8s ease;
-        }
-        #boot-screen h1 {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            letter-spacing: 2px;
-            color: #00ffcc;
-        }
-        #boot-btn {
-            padding: 12px 30px;
-            font-size: 1.1rem;
-            background: #00ffcc;
-            color: #000;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 0 15px rgba(0,255,204,0.4);
-            transition: transform 0.2s;
-        }
-        #boot-btn:hover {
-            transform: scale(1.05);
-        }
-
-        /* デスクトップ画面 */
-        #desktop {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            display: none;
-        }
-
-        /* タスクバー */
-        #taskbar {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 50px;
-            background: rgba(20, 20, 20, 0.85);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 15px;
-            z-index: 1000;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        .taskbar-left, .taskbar-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .tb-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #fff;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: background 0.2s;
-        }
-        .tb-btn:hover {
-            background: rgba(255,255,255,0.25);
-        }
-        .status-info {
-            color: #fff;
-            font-size: 0.85rem;
-            background: rgba(0,0,0,0.4);
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
-        /* 設定メニュー */
-        .menu-popup {
-            position: absolute;
-            bottom: 60px;
-            left: 15px;
-            width: 340px;
-            background: rgba(30, 30, 30, 0.95);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 12px;
-            padding: 15px;
-            color: #fff;
-            display: none;
-            z-index: 1001;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .menu-popup h3 {
-            font-size: 1rem;
-            margin-bottom: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding-bottom: 5px;
-        }
-        .menu-section {
-            margin-bottom: 12px;
-        }
-        .menu-section label {
-            font-size: 0.85rem;
+        canvas {
             display: block;
-            margin-bottom: 5px;
-            color: #ccc;
-        }
-        .menu-section input, .menu-section select {
             width: 100%;
-            padding: 6px;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #fff;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            margin-bottom: 5px;
+            height: 100%;
         }
-        .menu-section button {
-            width: 100%;
-            padding: 6px;
-            background: #00ffcc;
-            color: #000;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 4px;
+        .glass {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
-        .menu-section button:hover {
-            opacity: 0.9;
+        .animate-bounce-fast {
+            animation: bounceFast 0.4s infinite alternate;
         }
-
-        /* ウィンドウ */
-        .window {
-            position: absolute;
-            top: 50px;
-            left: 50px;
-            width: 500px;
-            height: 400px;
-            background: rgba(25, 25, 25, 0.92);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-            display: none;
-            flex-direction: column;
-            z-index: 100;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-            overflow: hidden;
-        }
-        .window-header {
-            height: 35px;
-            background: rgba(40, 40, 40, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 10px;
-            cursor: move;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .window-title {
-            color: #fff;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-        .window-close {
-            background: #ff5f56;
-            border: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-        .window-body {
-            flex: 1;
-            padding: 15px;
-            color: #fff;
-            overflow-y: auto;
-            font-size: 0.9rem;
-        }
-
-        /* デスクトップアイコン群 */
-        #desktop-icons {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .desk-icon {
-            width: 80px;
-            height: 80px;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: #fff;
-            font-size: 0.8rem;
-            text-align: center;
-            transition: background 0.2s;
-        }
-        .desk-icon:hover {
-            background: rgba(255,255,255,0.2);
-        }
-        .desk-icon span {
-            margin-top: 5px;
-        }
-
-        /* ストア要素 */
-        .store-item, .url-item {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .store-item button, .url-item button {
-            background: #00ffcc;
-            color: #000;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
+        @keyframes bounceFast {
+            from { transform: translateY(0) scale(1); }
+            to { transform: translateY(-10px) scale(1.05); }
         }
     </style>
 </head>
-<body>
+<body class="relative w-screen h-screen overflow-hidden select-none">
 
-    <!-- 起動画面 -->
-    <div id="boot-screen">
-        <h1>seronreOS mini</h1>
-        <button id="boot-btn" onclick="startOS()">OSを起動する</button>
+    <!-- Game Canvas -->
+    <canvas id="pondCanvas"></canvas>
+
+    <!-- Top Overlay Bar (Dual Score & Dashboard) -->
+    <div id="topBar" class="absolute top-3 right-3 left-3 flex justify-between items-center pointer-events-none z-10 transition-opacity duration-300">
+        
+        <!-- Dual Score Display & Level -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <!-- Human Fishing Score & Level -->
+            <button id="bucketBtn" class="glass text-amber-300 px-3.5 py-2 rounded-2xl flex items-center gap-2 shadow-xl hover:bg-slate-800 transition border border-amber-500/30">
+                <i data-lucide="fish" class="w-5 h-5 text-amber-400"></i>
+                <div class="text-left leading-tight">
+                    <div class="text-[9px] uppercase tracking-wider text-amber-400 font-bold">人間（釣りLv.<span id="humanLevelDisplay">1</span>）</div>
+                    <div id="humanScoreDisplay" class="text-xs sm:text-sm font-black text-white">0 匹</div>
+                </div>
+            </button>
+
+            <!-- Cat Paw Counter -->
+            <div class="glass text-cyan-300 px-3.5 py-2 rounded-2xl flex items-center gap-2 shadow-xl border border-cyan-500/30">
+                <i data-lucide="paw-print" class="w-5 h-5 text-cyan-400"></i>
+                <div class="text-left leading-tight">
+                    <div class="text-[9px] uppercase tracking-wider text-cyan-400 font-bold">ねこ（パシパシ）</div>
+                    <div id="catScoreDisplay" class="text-xs sm:text-sm font-black text-white">0 回</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Controls (Cat Lock Protected) -->
+        <div id="controlButtons" class="flex gap-2 pointer-events-auto">
+            <button id="catLockBtn" title="キャットロック（長押しで解除）" class="glass text-white p-2.5 rounded-2xl hover:bg-slate-700/60 active:scale-95 transition">
+                <i data-lucide="lock" id="lockIcon" class="w-5 h-5 text-cyan-300"></i>
+            </button>
+            <button id="fullscreenBtn" title="全画面表示" class="glass text-white p-2.5 rounded-2xl hover:bg-slate-700/60 active:scale-95 transition">
+                <i data-lucide="maximize" class="w-5 h-5 text-cyan-300"></i>
+            </button>
+            <button id="settingsBtn" title="設定" class="glass text-white p-2.5 rounded-2xl hover:bg-slate-700/60 active:scale-95 transition">
+                <i data-lucide="settings" class="w-5 h-5 text-cyan-300"></i>
+            </button>
+        </div>
     </div>
 
-    <!-- デスクトップ画面 -->
-    <div id="desktop">
-        <!-- デスクトップアイコン -->
-        <div id="desktop-icons">
-            <div class="desk-icon" onclick="openWindow('app-store-win')">
-                <span style="font-size:1.5rem;">🛍️</span>
-                <span>アプリストア</span>
-            </div>
-            <div class="desk-icon" onclick="openWindow('url-store-win')">
-                <span style="font-size:1.5rem;">🌐</span>
-                <span>URLストア</span>
-            </div>
-            <div class="desk-icon" onclick="openWindow('memo-win')">
-                <span style="font-size:1.5rem;">📝</span>
-                <span>メモ帳</span>
-            </div>
+    <!-- Human Cast / Reel Control Floating HUD -->
+    <div id="humanHud" class="absolute bottom-6 right-6 pointer-events-auto z-20 flex flex-col items-end gap-2">
+        <div class="glass text-amber-300 px-4 py-2 rounded-2xl text-xs font-bold border border-amber-500/30 shadow-lg text-center">
+            💡 画面をダブルタップ（<span id="currentIntervalLabel">0.3〜0.6</span>秒）で釣り糸を投げる
         </div>
+        <button id="castReelBtn" class="glass bg-amber-500/80 hover:bg-amber-500 text-slate-950 font-black px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-3 border-2 border-amber-300 active:scale-90 transition transform">
+            <i data-lucide="anchor" class="w-6 h-6"></i>
+            <span id="castBtnText" class="text-sm sm:text-base">仕掛けを投げる</span>
+        </button>
+    </div>
 
-        <!-- アプリストア ウィンドウ -->
-        <div class="window" id="app-store-win">
-            <div class="window-header" onmousedown="startDrag(event, 'app-store-win')">
-                <span class="window-title">serorehen App Store</span>
-                <button class="window-close" onclick="closeWindow('app-store-win')"></button>
+    <!-- FISH BITE / HIT ALERT -->
+    <div id="fishingAlert" class="hidden absolute top-20 left-1/2 -translate-x-1/2 pointer-events-none z-30 flex flex-col items-center">
+        <div class="bg-red-500/90 text-white font-black px-6 py-2.5 rounded-full text-base sm:text-lg shadow-2xl animate-bounce-fast border-2 border-amber-300 flex items-center gap-2">
+            <i data-lucide="zap" class="w-6 h-6 text-yellow-300 fill-yellow-300"></i>
+            <span>HIT! 猫にジャマされる前にリールを巻け！</span>
+        </div>
+    </div>
+
+    <!-- Cat Startled Fish Floating Text Indicator -->
+    <div id="startledNotice" class="hidden absolute top-32 left-1/2 -translate-x-1/2 pointer-events-none z-30 bg-cyan-900/90 text-cyan-200 px-4 py-1.5 rounded-full text-xs font-bold border border-cyan-400">
+        🐾 猫ちゃんが魚を驚かせて逃がしてしまった！
+    </div>
+
+    <!-- Lock Active Warning -->
+    <div id="lockNotice" class="hidden absolute top-5 left-1/2 -translate-x-1/2 glass text-cyan-200 px-5 py-2 rounded-full text-xs font-medium z-20 shadow-2xl flex items-center gap-2 border border-amber-400/50">
+        <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
+        <span>キャットロック有効中（解除はロックアイコンを長押し）</span>
+    </div>
+
+    <!-- Catch Celebration Modal -->
+    <div id="catchModal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass max-w-sm w-full rounded-3xl p-6 text-center text-white shadow-2xl space-y-4 border-2 border-amber-400/50 relative">
+            <div class="text-amber-400 text-xs font-extrabold tracking-widest uppercase">Great Catch!</div>
+            <div id="caughtFishTitle" class="text-2xl font-black text-cyan-300">錦鯉 (42cm)</div>
+            <div class="py-2 flex justify-center">
+                <div class="w-28 h-28 rounded-full bg-cyan-950/80 border-2 border-cyan-400/40 flex items-center justify-center text-5xl shadow-inner">
+                    🐟
+                </div>
             </div>
-            <div class="window-body">
-                <h3>公式アプリ一覧</h3>
-                <div class="store-item">
-                    <div>
-                        <strong>かんたんメモ</strong><br><small>標準のテキストメモツール</small>
+            <p id="caughtFishDesc" class="text-xs text-slate-300">猫ちゃんの攻撃をくぐり抜けてゲット！</p>
+            <button id="keepFishBtn" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl text-sm font-black shadow-lg transition">
+                バケツに入れる（池に戻す）
+            </button>
+        </div>
+    </div>
+
+    <!-- Catch Bucket Modal -->
+    <div id="bucketModal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="glass max-w-md w-full rounded-3xl p-6 text-white shadow-2xl space-y-4 border border-cyan-500/30">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h2 class="text-lg font-bold flex items-center gap-2 text-cyan-300">
+                    <i data-lucide="shopping-bag" class="w-5 h-5"></i> 釣果 & 猫ちゃん成果記録
+                </h2>
+                <button id="closeBucketBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="bucketList" class="max-h-60 overflow-y-auto space-y-2 pr-1">
+                <!-- Dynamic Items -->
+            </div>
+            <button id="clearBucketBtn" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-xs transition">
+                記録をリセット
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="glass max-w-md w-full rounded-3xl p-6 text-white shadow-2xl space-y-5 border border-cyan-500/30">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h2 class="text-lg font-bold flex items-center gap-2 text-cyan-300">
+                    <i data-lucide="sliders" class="w-5 h-5"></i> 池とゲームの設定
+                </h2>
+                <button id="closeSettingsBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Theme -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2">池のテーマ</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button class="pond-theme-btn p-2 rounded-xl border border-cyan-500 bg-cyan-950/60 text-xs font-medium text-center" data-theme="japanese">
+                            日本の池
+                        </button>
+                        <button class="pond-theme-btn p-2 rounded-xl border border-slate-700 bg-slate-800/40 text-xs font-medium text-center" data-theme="tropical">
+                            南国の海
+                        </button>
+                        <button class="pond-theme-btn p-2 rounded-xl border border-slate-700 bg-slate-800/40 text-xs font-medium text-center" data-theme="deep">
+                            深緑の清流
+                        </button>
                     </div>
-                    <button onclick="alert('インストール済みです')">導入済</button>
                 </div>
-                <div class="store-item">
-                    <div>
-                        <strong>ポイントファクトリー</strong><br><small>ポイントを増やす</small>
+
+                <!-- Fish Count (Up to 1000) -->
+                <div>
+                    <div class="flex justify-between text-xs font-medium mb-1">
+                        <span class="text-slate-300">魚の数 (最大1000匹)</span>
+                        <span id="fishCountVal" class="text-cyan-400 font-bold">100匹</span>
                     </div>
-                    <button onclick="addPoints(50)">ポイント獲得(+50)</button>
+                    <input type="range" id="fishCountSlider" min="10" max="1000" step="10" value="100" class="w-full accent-cyan-400 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
                 </div>
-            </div>
-        </div>
 
-        <!-- URLストア ウィンドウ -->
-        <div class="window" id="url-store-win">
-            <div class="window-header" onmousedown="startDrag(event, 'url-store-win')">
-                <span class="window-title">serorehen URL Store</span>
-                <button class="window-close" onclick="closeWindow('url-store-win')"></button>
-            </div>
-            <div class="window-body">
-                <h3>外部URL登録・購入 (所持ポイント: <span id="user-points">100</span> pt)</h3>
-                <div class="menu-section" style="margin-top:10px;">
-                    <label>URLのタイトル</label>
-                    <input type="text" id="new-url-title" placeholder="例: Apple公式サイト">
-                    <label>ウェブURL (https://...)</label>
-                    <input type="text" id="new-url-address" placeholder="https://www.apple.com/jp/">
-                    <button onclick="registerCustomUrl()">URLを登録 (50pt消費)</button>
+                <!-- Double Tap Interval Setting -->
+                <div>
+                    <div class="flex justify-between text-xs font-medium mb-1">
+                        <span class="text-slate-300">釣り用ダブルタップ判定時間</span>
+                        <span id="doubleTapIntervalVal" class="text-amber-400 font-bold">0.3〜0.6秒</span>
+                    </div>
+                    <input type="range" id="doubleTapIntervalSlider" min="0.1" max="1.0" step="0.05" value="0.6" class="w-full accent-amber-400 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
                 </div>
-                <hr style="border-color:rgba(255,255,255,0.2); margin:15px 0;">
-                <h3 style="margin-bottom:10px;">登録済みURL一覧</h3>
-                <div id="registered-urls-list"></div>
-            </div>
-        </div>
 
-        <!-- メモ帳 ウィンドウ -->
-        <div class="window" id="memo-win">
-            <div class="window-header" onmousedown="startDrag(event, 'memo-win')">
-                <span class="window-title">メモ帳</span>
-                <button class="window-close" onclick="closeWindow('memo-win')"></button>
-            </div>
-            <div class="window-body">
-                <textarea style="width:100%; height:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:8px; resize:none;" placeholder="ここにメモを入力できます..."></textarea>
-            </div>
-        </div>
-
-        <!-- 外部URLブラウザ ウィンドウ（内部完結プロキシ表示対応） -->
-        <div class="window" id="browser-win">
-            <div class="window-header" onmousedown="startDrag(event, 'browser-win')">
-                <span class="window-title" id="browser-win-title">OS内ブラウザ</span>
-                <button class="window-close" onclick="closeWindow('browser-win')"></button>
-            </div>
-            <div class="window-body" style="padding:0; display:flex; flex-direction:column;">
-                <div style="background:#222; padding:5px; display:flex; align-items:center; gap:5px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                    <input type="text" id="browser-address-bar" readonly style="flex:1; background:#111; border:1px solid #444; color:#fff; padding:3px 6px; font-size:0.8rem; border-radius:3px;">
-                    <button onclick="reloadBrowserContent()" style="background:#444; color:#fff; border:none; padding:3px 8px; font-size:0.8rem; border-radius:3px; cursor:pointer;">更新</button>
+                <!-- Fish Speed -->
+                <div>
+                    <div class="flex justify-between text-xs font-medium mb-1">
+                        <span class="text-slate-300">魚の泳ぐ速さ</span>
+                        <span id="fishSpeedVal" class="text-cyan-400 font-bold">標準</span>
+                    </div>
+                    <input type="range" id="fishSpeedSlider" min="1" max="3" step="0.5" value="1.5" class="w-full accent-cyan-400 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
                 </div>
-                <iframe id="browser-iframe" src="" style="width:100%; height:calc(100% - 32px); border:none; background:#fff;"></iframe>
-            </div>
-        </div>
 
-        <!-- タスクバー -->
-        <div id="taskbar">
-            <div class="taskbar-left">
-                <button class="tb-btn" onclick="toggleMenu('start-menu')">⚙️ 設定・背景</button>
-                <button class="tb-btn" onclick="openWindow('app-store-win')">🛍️️ ストア</button>
-            </div>
-            <div class="taskbar-right">
-                <span class="status-info" id="status-net">回線: 接続中</span>
-                <span class="status-info" id="status-sim">SIM: 有効</span>
-                <span class="status-info" id="clock">00:00</span>
-            </div>
-        </div>
-
-        <!-- 設定メニュー (背景・ネットワーク切替) -->
-        <div class="menu-popup" id="start-menu">
-            <h3>システム設定</h3>
-            <div class="menu-section">
-                <label>ネットワーク接続</label>
-                <select id="net-toggle" onchange="updateNetworkStatus()">
-                    <option value="on">インターネット接続 (ON)</option>
-                    <option value="off">インターネット切断 (OFF)</option>
-                </select>
-            </div>
-            <div class="menu-section">
-                <label>SIMカード状態</label>
-                <select id="sim-toggle" onchange="updateSimStatus()">
-                    <option value="on">SIMカード有効</option>
-                    <option value="off">SIMカード無効</option>
-                </select>
-            </div>
-            <div class="menu-section">
-                <label>デフォルト背景 (7種から選択)</label>
-                <select id="default-bg-select" onchange="changeDefaultBg()">
-                    <option value="https://images.unsplash.com/photo-1506744038136-46273834b3fb">自然の風景 1</option>
-                    <option value="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b">雪山・冬景色</option>
-                    <option value="https://images.unsplash.com/photo-1511497584788-87676119255a">神秘の森林</option>
-                    <option value="https://images.unsplash.com/photo-1507525428034-b723cf961d3e">美しい海・ビーチ</option>
-                    <option value="https://images.unsplash.com/photo-1519681393784-d120267933ba">夜空・星空</option>
-                    <option value="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05">緑豊かな草原</option>
-                    <option value="https://images.unsplash.com/photo-1534447677768-be436bb09401">宇宙・銀河</option>
-                </select>
-            </div>
-            <div class="menu-section">
-                <label>ウェブ画像URLで背景を変更</label>
-                <input type="text" id="custom-bg-url" placeholder="https://... などの画像URL">
-                <button onclick="applyCustomUrlBg()">URLの画像を適用</button>
-            </div>
-            <div class="menu-section">
-                <label>自分の保存画像 (ファイル選択)</label>
-                <input type="file" id="local-img-file" accept="image/*" onchange="applyLocalFileBg(event)">
+                <!-- Sound Toggle -->
+                <div class="flex justify-between items-center py-2 border-t border-slate-700">
+                    <div>
+                        <div class="text-xs font-medium text-slate-200">効果音</div>
+                        <div class="text-[10px] text-slate-400">水しぶき音・ヒット音・巻き上げ音</div>
+                    </div>
+                    <button id="soundToggle" class="w-11 h-6 bg-cyan-600 rounded-full p-1 transition flex items-center">
+                        <div id="soundToggleKnob" class="w-4 h-4 bg-white rounded-full translate-x-5 transition transform"></div>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        let points = 100;
-        let registeredUrls = [
-            { title: "サンプル検索", url: "https://www.google.com/search?igu=1" },
-            { title: "Apple公式サイト", url: "https://www.apple.com/jp/" }
-        ];
-        let currentTargetUrl = "";
-
-        // 起動処理
-        function startOS() {
-            document.getElementById('boot-screen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('boot-screen').style.display = 'none';
-                document.getElementById('desktop').style.display = 'block';
-                changeDefaultBg();
-            }, 800);
-        }
-
-        // 時計更新
-        setInterval(() => {
-            const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('clock').innerText = `${h}:${m}`;
-        }, 1000);
-
-        // メニュー開閉
-        function toggleMenu(id) {
-            const menu = document.getElementById(id);
-            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-        }
-
-        // デフォルト背景変更 (7種)
-        function changeDefaultBg() {
-            const url = document.getElementById('default-bg-select').value;
-            document.getElementById('desktop').style.backgroundImage = `url('${url}')`;
-        }
-
-        // ウェブURL背景適用
-        function applyCustomUrlBg() {
-            const url = document.getElementById('custom-bg-url').value.trim();
-            if (url) {
-                document.getElementById('desktop').style.backgroundImage = `url('${url}')`;
-                alert('背景画像を適用しました！');
-            } else {
-                alert('有効な画像URLを入力してください。');
+        class WaterAudioSynthesizer {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
             }
-        }
 
-        // ローカルファイル背景適用
-        function applyLocalFileBg(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('desktop').style.backgroundImage = `url('${e.target.result}')`;
-                    alert('保存された画像を背景に設定しました！');
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
                 }
-                reader.readAsDataURL(file);
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playSplash(volume = 0.8) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const bufferSize = this.ctx.sampleRate * 0.12;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(800 + Math.random() * 400, now);
+                filter.frequency.exponentialRampToValueAtTime(150, now + 0.1);
+                filter.Q.value = 3;
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.4 * volume, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start(now);
+            }
+
+            playHitAlert() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(520, now);
+                osc.frequency.exponentialRampToValueAtTime(1040, now + 0.15);
+
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.18);
+            }
+
+            playReelCatch() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.setValueAtTime(600, now + 0.1);
+                osc.frequency.setValueAtTime(900, now + 0.2);
+
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
             }
         }
 
-        // ネットワーク・SIM状態管理
-        function updateNetworkStatus() {
-            const val = document.getElementById('net-toggle').value;
-            document.getElementById('status-net').innerText = val === 'on' ? '回線: 接続中' : '回線: 切断中';
-        }
-        function updateSimStatus() {
-            const val = document.getElementById('sim-toggle').value;
-            document.getElementById('status-sim').innerText = val === 'on' ? 'SIM: 有効' : 'SIM: 無効';
-        }
+        const audio = new WaterAudioSynthesizer();
 
-        // ポイント追加
-        function addPoints(amt) {
-            points += amt;
-            document.getElementById('user-points').innerText = points;
-            alert(`${amt}ポイント獲得しました！`);
-        }
+        const canvas = document.getElementById('pondCanvas');
+        const ctx = canvas.getContext('2d');
 
-        // URLストア登録
-        function registerCustomUrl() {
-            const title = document.getElementById('new-url-title').value.trim();
-            const url = document.getElementById('new-url-address').value.trim();
-            if (!title || !url) {
-                alert('タイトルとURLの両方を入力してください。');
-                return;
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        const state = {
+            pondTheme: 'japanese',
+            fishCount: 100,
+            speedMultiplier: 1.5,
+            isLocked: false,
+            soundEnabled: true,
+            doubleTapMaxTime: 0.6,
+            
+            humanCaughtCount: 0,
+            catPawCount: 0,
+            catchHistory: [],
+
+            hook: {
+                active: false,
+                x: width / 2,
+                y: height / 2,
+                bitingFish: null,
+                isBiting: false,
+                biteTimeout: null
             }
-            if (points < 50) {
-                alert('ポイントが足りません！ (必要: 50pt)');
-                return;
-            }
-            points -= 50;
-            document.getElementById('user-points').innerText = points;
-            registeredUrls.push({ title, url });
-            renderRegisteredUrls();
-            document.getElementById('new-url-title').value = '';
-            document.getElementById('new-url-address').value = '';
-            alert('新しいURLを登録しました！');
+        };
+
+        function getHumanLevel() {
+            return Math.floor(state.catPawCount / 100) + 1;
         }
 
-        // 登録URL一覧描画
-        function renderRegisteredUrls() {
-            const list = document.getElementById('registered-urls-list');
-            list.innerHTML = '';
-            registeredUrls.forEach((item) => {
-                list.innerHTML += `
-                    <div class="url-item">
-                        <div><strong>${item.title}</strong><br><small style="color:#aaa;">${item.url}</small></div>
-                        <button onclick="launchBrowser('${item.url}', '${item.title}')">起動</button>
-                    </div>
-                `;
+        function updateUIRealtime() {
+            document.getElementById('catScoreDisplay').innerText = `${state.catPawCount} 回`;
+            document.getElementById('humanScoreDisplay').innerText = `${state.humanCaughtCount} 匹`;
+            document.getElementById('humanLevelDisplay').innerText = getHumanLevel();
+        }
+
+        const FISH_STYLES = {
+            koi_kohaku: { name: '紅白錦鯉', body: '#F4F4F0', spots: ['#E63946', '#D62828'], fin: 'rgba(255,255,255,0.7)', scale: 1.25 },
+            koi_sanke: { name: '三色錦鯉', body: '#F4F4F0', spots: ['#E63946', '#1D3557'], fin: 'rgba(255,255,255,0.7)', scale: 1.3 },
+            koi_yamabuki: { name: '山吹黄金鯉', body: '#FFB703', spots: ['#FB8500'], fin: 'rgba(255,220,100,0.8)', scale: 1.2 },
+            goldfish_red: { name: '和金', body: '#FF4500', spots: ['#FF6B35'], fin: 'rgba(255,100,50,0.75)', scale: 0.95 },
+            goldfish_black: { name: '出目金', body: '#222222', spots: ['#111111'], fin: 'rgba(50,50,50,0.8)', scale: 0.9 },
+            tropical_blue: { name: 'ネオン熱帯魚', body: '#00B4D8', spots: ['#90E0EF', '#03045E'], fin: 'rgba(144,224,239,0.8)', scale: 0.85 }
+        };
+
+        class Fish {
+            constructor() {
+                this.reset();
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+            }
+
+            reset() {
+                const keys = Object.keys(FISH_STYLES);
+                this.styleKey = keys[Math.floor(Math.random() * keys.length)];
+                this.style = FISH_STYLES[this.styleKey];
+
+                this.size = (Math.random() * 8 + 20) * this.style.scale;
+                this.lengthCm = Math.floor(this.size * 1.25 + Math.random() * 6);
+
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.angle = Math.atan2(this.vy, this.vx);
+
+                this.maxSpeed = 1.8 * state.speedMultiplier;
+                this.fleeSpeed = 8.0 * state.speedMultiplier;
+                this.currentMaxSpeed = this.maxSpeed;
+
+                this.tailPhase = Math.random() * Math.PI * 2;
+                this.targetX = Math.random() * width;
+                this.targetY = Math.random() * height;
+                this.changeTargetTimer = 0;
+                this.isFleeing = false;
+                this.isAttractedToHook = false;
+            }
+
+            update() {
+                if (this.currentMaxSpeed > this.maxSpeed) {
+                    this.currentMaxSpeed -= 0.2;
+                    if (this.currentMaxSpeed < this.maxSpeed) {
+                        this.currentMaxSpeed = this.maxSpeed;
+                        this.isFleeing = false;
+                    }
+                }
+
+                if (state.hook.active && !this.isFleeing) {
+                    const distToHook = Math.hypot(state.hook.x - this.x, state.hook.y - this.y);
+                    if (distToHook < 220) {
+                        this.targetX = state.hook.x;
+                        this.targetY = state.hook.y;
+                        this.isAttractedToHook = true;
+
+                        if (distToHook < 22 && !state.hook.isBiting && !state.hook.bitingFish) {
+                            triggerFishBite(this);
+                        }
+                    } else {
+                        this.isAttractedToHook = false;
+                    }
+                } else {
+                    this.isAttractedToHook = false;
+                }
+
+                if (!this.isAttractedToHook) {
+                    this.changeTargetTimer++;
+                    if (this.changeTargetTimer > 160 || Math.hypot(this.targetX - this.x, this.targetY - this.y) < 40) {
+                        this.targetX = Math.random() * (width - 100) + 50;
+                        this.targetY = Math.random() * (height - 100) + 50;
+                        this.changeTargetTimer = 0;
+                    }
+                }
+
+                const angleToTarget = Math.atan2(this.targetY - this.y, this.targetX - this.x);
+                let angleDiff = angleToTarget - this.angle;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+
+                const turnRate = this.isAttractedToHook ? 0.09 : 0.04;
+                this.angle += angleDiff * turnRate;
+
+                const speed = this.isFleeing ? this.currentMaxSpeed : (this.isAttractedToHook ? this.maxSpeed * 0.75 : this.maxSpeed * 0.85);
+                this.vx = Math.cos(this.angle) * speed;
+                this.vy = Math.sin(this.angle) * speed;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                const margin = 40;
+                if (this.x < margin) { this.x = margin; this.angle = Math.PI - this.angle; }
+                if (this.x > width - margin) { this.x = width - margin; this.angle = Math.PI - this.angle; }
+                if (this.y < margin) { this.y = margin; this.angle = -this.angle; }
+                if (this.y > height - margin) { this.y = height - margin; this.angle = -this.angle; }
+
+                this.tailPhase += this.isFleeing ? 0.5 : 0.16;
+            }
+
+            fleeFrom(touchX, touchY) {
+                const dist = Math.hypot(touchX - this.x, touchY - this.y);
+                if (dist < 200) {
+                    this.angle = Math.atan2(this.y - touchY, this.x - touchX) + (Math.random() - 0.5) * 0.4;
+                    this.currentMaxSpeed = this.fleeSpeed;
+                    this.isFleeing = true;
+                    this.targetX = this.x + Math.cos(this.angle) * 350;
+                    this.targetY = this.y + Math.sin(this.angle) * 350;
+
+                    if (state.hook.isBiting && state.hook.bitingFish === this) {
+                        cancelBiteDueToCat(touchX, touchY);
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                const finWiggle = Math.sin(this.tailPhase) * 0.18;
+                ctx.fillStyle = this.style.fin;
+
+                // 尾びれ
+                const tailAngle = Math.sin(this.tailPhase) * 0.38;
+                ctx.save();
+                ctx.translate(-this.size * 0.7, 0);
+                ctx.rotate(tailAngle);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-this.size * 0.5, -this.size * 0.3);
+                ctx.lineTo(-this.size * 0.5, this.size * 0.3);
+                ctx.fill();
+                ctx.restore();
+
+                // 胴体
+                ctx.fillStyle = this.style.body;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 0.8, this.size * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        let fishes = [];
+        function initFishes() {
+            fishes = [];
+            for (let i = 0; i < state.fishCount; i++) fishes.push(new Fish());
+        }
+        initFishes();
+
+        const ripples = [];
+        const pawPrints = [];
+
+        function createRipple(x, y, isBig = false) {
+            ripples.push({
+                x, y,
+                radius: isBig ? 12 : 5,
+                maxRadius: isBig ? 140 : 80,
+                alpha: 0.85,
+                speed: isBig ? 3.5 : 2.2
             });
         }
-        renderRegisteredUrls();
 
-        // 外部URLブラウザ起動（OS内完結プロキシ・フォールバック対応）
-        function launchBrowser(url, title) {
-            currentTargetUrl = url;
-            document.getElementById('browser-win-title').innerText = title;
-            document.getElementById('browser-address-bar').value = url;
-            
-            const iframe = document.getElementById('browser-iframe');
-            // X-Frame-Optionsで弾かれるサイト（Apple等）もOS内で安全に表示させるため、プロキシ経由または直接埋め込みを試行
-            if (url.includes('google.com')) {
-                iframe.src = url;
+        function createPawPrint(x, y) {
+            pawPrints.push({
+                x, y,
+                alpha: 0.7,
+                scale: 0.8 + Math.random() * 0.4
+            });
+        }
+
+        function triggerFishBite(fish) {
+            state.hook.isBiting = true;
+            state.hook.bitingFish = fish;
+            audio.playHitAlert();
+
+            document.getElementById('fishingAlert').classList.remove('hidden');
+
+            state.hook.biteTimeout = setTimeout(() => {
+                if (state.hook.isBiting) {
+                    state.hook.isBiting = false;
+                    state.hook.bitingFish = null;
+                    document.getElementById('fishingAlert').classList.add('hidden');
+                    createRipple(state.hook.x, state.hook.y, true);
+                    audio.playSplash(1.2);
+                }
+            }, 2200);
+        }
+
+        function cancelBiteDueToCat(touchX, touchY) {
+            if (state.hook.isBiting) {
+                clearTimeout(state.hook.biteTimeout);
+                state.hook.isBiting = false;
+                state.hook.bitingFish = null;
+                document.getElementById('fishingAlert').classList.add('hidden');
+
+                const notice = document.getElementById('startledNotice');
+                notice.classList.remove('hidden');
+                setTimeout(() => notice.classList.add('hidden'), 2000);
+
+                createRipple(touchX, touchY, true);
+                audio.playSplash(1.5);
+            }
+        }
+
+        function registerCatTouch(x, y) {
+            state.catPawCount++;
+            updateUIRealtime();
+
+            audio.playSplash(0.7);
+            createRipple(x, y, false);
+            createPawPrint(x, y);
+
+            fishes.forEach(f => f.fleeFrom(x, y));
+        }
+
+        let lastCastAttemptTime = 0;
+
+        function handleHumanCastAction() {
+            const now = Date.now();
+            const diff = (now - lastCastAttemptTime) / 1000;
+            lastCastAttemptTime = now;
+
+            if (diff >= 0.1 && diff <= state.doubleTapMaxTime) {
+                executeFishingAction();
+            }
+        }
+
+        function executeFishingAction() {
+            if (state.hook.isBiting && state.hook.bitingFish) {
+                clearTimeout(state.hook.biteTimeout);
+                const caught = state.hook.bitingFish;
+
+                state.hook.active = false;
+                state.hook.isBiting = false;
+                state.hook.bitingFish = null;
+                document.getElementById('fishingAlert').classList.add('hidden');
+
+                audio.playReelCatch();
+                state.humanCaughtCount++;
+                updateUIRealtime();
+
+                showCatchCelebration(caught);
+                document.getElementById('castBtnText').innerText = '仕掛けを投げる';
+            } else if (!state.hook.active) {
+                state.hook.active = true;
+                state.hook.x = width / 2 + (Math.random() - 0.5) * (width * 0.4);
+                state.hook.y = height / 2 + (Math.random() - 0.5) * (height * 0.4);
+
+                createRipple(state.hook.x, state.hook.y, true);
+                audio.playSplash(0.9);
+                document.getElementById('castBtnText').innerText = '仕掛けを引く';
             } else {
-                // 一般的なサイトをプロキシサービス経由でOS内ウィンドウに完全にインライン表示させる仕組み
-                iframe.src = `https://r.jina.ai/` + url; 
-            }
-            openWindow('browser-win');
-        }
-
-        function reloadBrowserContent() {
-            if (currentTargetUrl) {
-                launchBrowser(currentTargetUrl, document.getElementById('browser-win-title').innerText);
+                state.hook.active = false;
+                state.hook.isBiting = false;
+                state.hook.bitingFish = null;
+                document.getElementById('fishingAlert').classList.add('hidden');
+                document.getElementById('castBtnText').innerText = '仕掛けを投げる';
             }
         }
 
-        // ウィンドウ管理 (最大5個同時起動、ドラッグ移動対応)
-        let activeWindowsCount = 0;
-        function openWindow(id) {
-            const win = document.getElementById(id);
-            if (win.style.display !== 'flex') {
-                if (activeWindowsCount >= 5) {
-                    alert('同時に開けるウィンドウは最大5個までです。');
-                    return;
+        // --- 猫の長押し判定の管理（0.5秒〜2.0秒） ---
+        let activePressTimer = null;
+        let pressStartX = 0;
+        let pressStartY = 0;
+        let isHolding = false;
+
+        function startPress(x, y) {
+            pressStartX = x;
+            pressStartY = y;
+            isHolding = true;
+            
+            // 0.5秒後に「長押し成立」として猫のアクションをトリガー
+            clearTimeout(activePressTimer);
+            activePressTimer = setTimeout(() => {
+                if (isHolding) {
+                    registerCatTouch(pressStartX, pressStartY);
                 }
-                win.style.display = 'flex';
-                activeWindowsCount++;
-            }
-            win.style.zIndex = 100 + activeWindowsCount;
+            }, 500);
         }
 
-        function closeWindow(id) {
-            const win = document.getElementById(id);
-            if (win.style.display === 'flex') {
-                win.style.display = 'none';
-                activeWindowsCount--;
-                if (id === 'browser-win') {
-                    document.getElementById('browser-iframe').src = '';
+        function endPress(x, y) {
+            if (!isHolding) return;
+            clearTimeout(activePressTimer);
+            
+            // もし2.0秒以上押し続けていたら、猫の判定をリセットする（2秒以内の長押し制限）
+            // （タイマー開始からの経過時間を正確に制御するため、タッチ開始からの時間をチェック）
+            isHolding = false;
+        }
+
+        // タッチ / マウスイベントの割り当て（猫の長押し 0.5秒〜2秒）
+        window.addEventListener('touchstart', (e) => {
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (target === canvas) {
+                    startPress(touch.clientX, touch.clientY);
+                    handleHumanCastAction();
                 }
             }
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            endPress();
+        }, { passive: true });
+
+        canvas.addEventListener('mousedown', (e) => {
+            startPress(e.clientX, e.clientY);
+            handleHumanCastAction();
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            endPress();
+        });
+
+        document.getElementById('castReelBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            executeFishingAction();
+        });
+
+        function showCatchCelebration(fish) {
+            document.getElementById('caughtFishTitle').innerText = `${fish.style.name} (${fish.lengthCm}cm)`;
+            document.getElementById('catchModal').classList.remove('hidden');
+
+            state.catchHistory.push({
+                name: fish.style.name,
+                length: fish.lengthCm,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+
+            fish.reset();
         }
 
-        // ドラッグ移動ロジック
-        let draggingWin = null;
-        let offsetX = 0, offsetY = 0;
+        document.getElementById('keepFishBtn').addEventListener('click', () => {
+            document.getElementById('catchModal').classList.add('hidden');
+        });
 
-        function startDrag(e, id) {
-            draggingWin = document.getElementById(id);
-            offsetX = e.clientX - draggingWin.offsetLeft;
-            offsetY = e.clientY - draggingWin.offsetTop;
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('mouseup', stopDrag);
+        function updateBucketUI() {
+            const bucketList = document.getElementById('bucketList');
+            let html = `
+                <div class="p-3 bg-cyan-950/60 rounded-2xl border border-cyan-500/30 flex justify-between items-center mb-3">
+                    <span class="text-xs text-slate-300 font-bold">ねこちゃんのパシパシ総数 / 釣りLv</span>
+                    <span class="text-sm font-black text-cyan-300">${state.catPawCount}回 (Lv.${getHumanLevel()})</span>
+                </div>
+            `;
+
+            if (state.catchHistory.length === 0) {
+                html += `<p class="text-center text-xs text-slate-400 py-6">まだ魚を釣っていません。</p>`;
+            } else {
+                html += state.catchHistory.map((item, idx) => `
+                    <div class="flex justify-between items-center p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="text-amber-400 font-bold">#${idx + 1}</span>
+                            <span class="font-bold text-white">${item.name}</span>
+                        </div>
+                        <div class="text-slate-300">${item.length} cm <span class="text-[10px] text-slate-500">(${item.time})</span></div>
+                    </div>
+                `).join('');
+            }
+            bucketList.innerHTML = html;
         }
 
-        function onDrag(e) {
-            if (!draggingWin) return;
-            draggingWin.style.left = (e.clientX - offsetX) + 'px';
-            draggingWin.style.top = (e.clientY - offsetY) + 'px';
+        document.getElementById('clearBucketBtn').addEventListener('click', () => {
+            state.catchHistory = [];
+            state.catPawCount = 0;
+            state.humanCaughtCount = 0;
+            updateUIRealtime();
+            updateBucketUI();
+        });
+
+        function animate() {
+            if (state.pondTheme === 'japanese') {
+                const grad = ctx.createRadialGradient(width/2, height/2, 80, width/2, height/2, Math.max(width, height));
+                grad.addColorStop(0, '#0a3a40');
+                grad.addColorStop(0.7, '#05232d');
+                grad.addColorStop(1, '#021118');
+                ctx.fillStyle = grad;
+            } else if (state.pondTheme === 'tropical') {
+                const grad = ctx.createRadialGradient(width/2, height/2, 80, width/2, height/2, Math.max(width, height));
+                grad.addColorStop(0, '#0077b6');
+                grad.addColorStop(0.7, '#023e8a');
+                grad.addColorStop(1, '#03045e');
+                ctx.fillStyle = grad;
+            } else {
+                const grad = ctx.createRadialGradient(width/2, height/2, 80, width/2, height/2, Math.max(width, height));
+                grad.addColorStop(0, '#134e4a');
+                grad.addColorStop(0.7, '#064e3b');
+                grad.addColorStop(1, '#022c22');
+                ctx.fillStyle = grad;
+            }
+            ctx.fillRect(0, 0, width, height);
+
+            fishes.forEach(f => {
+                f.update();
+                f.draw(ctx);
+            });
+
+            if (state.hook.active) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(width / 2, 0);
+                ctx.lineTo(state.hook.x, state.hook.y);
+                ctx.stroke();
+
+                const bobY = state.hook.y + (state.hook.isBiting ? Math.sin(Date.now() * 0.03) * 7 : Math.sin(Date.now() * 0.005) * 2);
+                ctx.fillStyle = state.hook.isBiting ? '#EF4444' : '#F97316';
+                ctx.beginPath();
+                ctx.arc(state.hook.x, bobY, 9, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            for (let i = pawPrints.length - 1; i >= 0; i--) {
+                const p = pawPrints[i];
+                p.alpha -= 0.012;
+                if (p.alpha <= 0) { pawPrints.splice(i, 1); continue; }
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.scale(p.scale, p.scale);
+                ctx.fillStyle = `rgba(56, 189, 248, ${p.alpha})`;
+
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 10, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                const r = ripples[i];
+                r.radius += r.speed;
+                r.alpha -= 0.015;
+                if (r.alpha <= 0) { ripples.splice(i, 1); continue; }
+
+                ctx.strokeStyle = `rgba(180, 240, 255, ${r.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            requestAnimationFrame(animate);
         }
 
-        function stopDrag() {
-            document.removeEventListener('mousemove', onDrag);
-            document.removeEventListener('mouseup', stopDrag);
-            draggingWin = null;
-        }
+        const settingsModal = document.getElementById('settingsModal');
+        const bucketModal = document.getElementById('bucketModal');
+
+        document.getElementById('settingsBtn').addEventListener('click', () => settingsModal.classList.remove('hidden'));
+        document.getElementById('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.add('hidden'));
+
+        document.getElementById('bucketBtn').addEventListener('click', () => {
+            updateBucketUI();
+            bucketModal.classList.remove('hidden');
+        });
+        document.getElementById('closeBucketBtn').addEventListener('click', () => bucketModal.classList.add('hidden'));
+
+        document.querySelectorAll('.pond-theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.pond-theme-btn').forEach(b => {
+                    b.classList.remove('border-cyan-500', 'bg-cyan-950/60');
+                    b.classList.add('border-slate-700', 'bg-slate-800/40');
+                });
+                btn.classList.add('border-cyan-500', 'bg-cyan-950/60');
+                btn.classList.remove('border-slate-700', 'bg-slate-800/40');
+                state.pondTheme = btn.dataset.theme;
+            });
+        });
+
+        document.getElementById('fishCountSlider').addEventListener('input', (e) => {
+            state.fishCount = parseInt(e.target.value);
+            document.getElementById('fishCountVal').innerText = `${state.fishCount}匹`;
+            initFishes();
+        });
+
+        document.getElementById('doubleTapIntervalSlider').addEventListener('input', (e) => {
+            state.doubleTapMaxTime = parseFloat(e.target.value);
+            document.getElementById('doubleTapIntervalVal').innerText = `0.3〜${state.doubleTapMaxTime.toFixed(2)}秒`;
+            document.getElementById('currentIntervalLabel').innerText = `0.3〜${state.doubleTapMaxTime.toFixed(2)}`;
+        });
+
+        document.getElementById('fishSpeedSlider').addEventListener('input', (e) => {
+            state.speedMultiplier = parseFloat(e.target.value);
+            initFishes();
+        });
+
+        document.getElementById('soundToggle').addEventListener('click', () => {
+            state.soundEnabled = !state.soundEnabled;
+            audio.enabled = state.soundEnabled;
+            document.getElementById('soundToggleKnob').classList.toggle('translate-x-5');
+        });
+
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        const catLockBtn = document.getElementById('catLockBtn');
+        const controlButtons = document.getElementById('controlButtons');
+        const lockNotice = document.getElementById('lockNotice');
+        let lockTimer = null;
+
+        catLockBtn.addEventListener('click', () => {
+            if (!state.isLocked) {
+                state.isLocked = true;
+                controlButtons.classList.add('opacity-30');
+                lockNotice.classList.remove('hidden');
+            }
+        });
+
+        const unlock = () => {
+            if (state.isLocked) {
+                state.isLocked = false;
+                controlButtons.classList.remove('opacity-30');
+                lockNotice.classList.add('hidden');
+            }
+        };
+
+        catLockBtn.addEventListener('mousedown', () => { if (state.isLocked) lockTimer = setTimeout(unlock, 1200); });
+        catLockBtn.addEventListener('mouseup', () => clearTimeout(lockTimer));
+        catLockBtn.addEventListener('touchstart', () => { if (state.isLocked) lockTimer = setTimeout(unlock, 1200); });
+        catLockBtn.addEventListener('touchend', () => clearTimeout(lockTimer));
+
+        window.onload = () => {
+            lucide.createIcons();
+            animate();
+        };
     </script>
 </body>
 </html>
