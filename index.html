@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>ナマズ釣りゲーム - リアルタイム対戦</title>
+  <title>ナマズ釣りゲーム</title>
   <style>
     * {
       box-sizing: border-box;
@@ -53,7 +53,7 @@
     }
     #leaderboard {
       position: absolute;
-      top: 75px;
+      top: 85px; /* 上のバーと重ならないよう位置を調整 */
       right: 15px;
       background: rgba(0, 0, 0, 0.6);
       padding: 12px;
@@ -131,7 +131,7 @@
 
     <div id="leaderboard">
       <h3>リアルタイム順位</h3>
-      <div id="leaderboard-list">読み込み中...</div>
+      <div id="leaderboard-list">まだ記録がありません</div>
     </div>
 
     <div id="pond"></div>
@@ -150,6 +150,7 @@
       serverTimestamp 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+    // ご自身のFirebase設定
     const firebaseConfig = {
       apiKey: "AIzaSyBSkY3xAd071fz0Jn23Fz1COnUt51Xzebg",
       authDomain: "nnxe-29f42.firebaseapp.com",
@@ -164,7 +165,6 @@
     const db = getFirestore(app);
 
     let score = 0;
-    let globalCount = 0;
     const playerId = "プレイヤー_" + Math.floor(Math.random() * 8999 + 1000);
 
     const myScoreEl = document.getElementById('my-score');
@@ -172,12 +172,14 @@
     const leaderboardListEl = document.getElementById('leaderboard-list');
     const pond = document.getElementById('pond');
 
-    const scoresQuery = query(collection(db, "catch_logs"), orderBy("timestamp", "desc"), limit(50));
+    // 1. リアルタイム受信 (誰かが釣るたびに「みんなの合計」と「順位」を即時更新)
+    const scoresQuery = query(collection(db, "catch_logs"), orderBy("timestamp", "desc"), limit(100));
     
     onSnapshot(scoresQuery, (snapshot) => {
-      globalCount = snapshot.size;
-      globalScoreEl.textContent = `${globalCount} 匹`;
+      // みんなの合計数
+      globalScoreEl.textContent = `${snapshot.size} 匹`;
 
+      // プレイヤーごとの釣果を計算してランキング化
       const playerTotals = {};
       snapshot.docs.forEach(doc => {
         const data = doc.data();
@@ -187,14 +189,20 @@
       });
 
       const sorted = Object.entries(playerTotals).sort((a, b) => b[1] - a[1]).slice(0, 5);
-      leaderboardListEl.innerHTML = sorted.map(([id, count], idx) => `
-        <div class="leader-item">
-          <span>${idx + 1}. ${id === playerId ? '★あなた' : id}</span>
-          <span><b>${count}</b> 匹</span>
-        </div>
-      `).join('') || 'まだ記録がありません';
+      
+      if (sorted.length === 0) {
+        leaderboardListEl.innerHTML = 'まだ記録がありません';
+      } else {
+        leaderboardListEl.innerHTML = sorted.map(([id, count], idx) => `
+          <div class="leader-item">
+            <span>${idx + 1}. ${id === playerId ? '★あなた' : id}</span>
+            <span><b>${count}</b> 匹</span>
+          </div>
+        `).join('');
+      }
     });
 
+    // 2. ナマズの生成とクリック時の処理
     function spawnNamazu() {
       const namazu = document.createElement('div');
       namazu.className = 'namazu';
@@ -212,9 +220,11 @@
         e.stopPropagation();
         createRipple(e.clientX, e.clientY);
         
+        // 自分のスコアをプラス
         score++;
         myScoreEl.textContent = `${score} 匹`;
 
+        // 釣った記録をリアルタイムでFirebaseへ保存
         addDoc(collection(db, "catch_logs"), {
           playerId: playerId,
           timestamp: serverTimestamp()
@@ -226,6 +236,7 @@
 
       pond.appendChild(namazu);
 
+      // 一定時間タップされないと消えて別の場所に出現
       setTimeout(() => {
         if (namazu.parentElement) {
           namazu.remove();
@@ -243,6 +254,7 @@
       setTimeout(() => ripple.remove(), 600);
     }
 
+    // ゲーム開始
     spawnNamazu();
     spawnNamazu();
   </script>
