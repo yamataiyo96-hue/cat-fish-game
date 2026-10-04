@@ -1,245 +1,611 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>ナマズ釣りゲーム</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #1a2a3a;
-      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
-      overflow: hidden;
-      color: #fff;
-    }
-    #game-container {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      background: linear-gradient(to bottom, #1e3c72, #2a5298);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-    }
-    #scoreboard {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      right: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 10;
-      background: rgba(0, 0, 0, 0.4);
-      padding: 10px 18px;
-      border-radius: 12px;
-      backdrop-filter: blur(5px);
-    }
-    .score-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #ffeb3b;
-    }
-    .score-value {
-      font-size: 24px;
-      font-weight: bold;
-    }
-    #leaderboard {
-      position: absolute;
-      top: 85px;
-      right: 15px;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 12px;
-      border-radius: 12px;
-      width: 180px;
-      z-index: 10;
-      font-size: 13px;
-    }
-    #leaderboard h3 {
-      margin: 0 0 8px 0;
-      font-size: 14px;
-      color: #00e676;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-      padding-bottom: 4px;
-    }
-    .leader-item {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-    #pond {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-    }
-    /* 魚の見た目を絵文字（🐟）に変更 */
-    .namazu {
-      position: absolute;
-      font-size: 60px;
-      cursor: pointer;
-      transition: transform 0.1s ease;
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
-      line-height: 1;
-    }
-    .namazu:active {
-      transform: scale(1.2);
-    }
-    .ripple {
-      position: absolute;
-      border: 2px solid rgba(255, 255, 255, 0.6);
-      border-radius: 50%;
-      animation: ripple-effect 0.6s linear;
-      pointer-events: none;
-    }
-    @keyframes ripple-effect {
-      0% { width: 0; height: 0; opacity: 1; transform: translate(-50%, -50%); }
-      100% { width: 80px; height: 80px; opacity: 0; transform: translate(-50%, -50%); }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>seronreOS mini</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+            user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #111;
+        }
+        /* 起動画面 */
+        #boot-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.8s ease;
+        }
+        #boot-screen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            color: #00ffcc;
+        }
+        #boot-btn {
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            background: #00ffcc;
+            color: #000;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(0,255,204,0.4);
+            transition: transform 0.2s;
+        }
+        #boot-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* デスクトップ画面 */
+        #desktop {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: none;
+        }
+
+        /* タスクバー */
+        #taskbar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            z-index: 1000;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .taskbar-left, .taskbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tb-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        .tb-btn:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        .status-info {
+            color: #fff;
+            font-size: 0.85rem;
+            background: rgba(0,0,0,0.4);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        /* 設定メニュー */
+        .menu-popup {
+            position: absolute;
+            bottom: 60px;
+            left: 15px;
+            width: 340px;
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 15px;
+            color: #fff;
+            display: none;
+            z-index: 1001;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .menu-popup h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 5px;
+        }
+        .menu-section {
+            margin-bottom: 12px;
+        }
+        .menu-section label {
+            font-size: 0.85rem;
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+        .menu-section input, .menu-section select {
+            width: 100%;
+            padding: 6px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        .menu-section button {
+            width: 100%;
+            padding: 6px;
+            background: #00ffcc;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        .menu-section button:hover {
+            opacity: 0.9;
+        }
+
+        /* ウィンドウ */
+        .window {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            width: 500px;
+            height: 400px;
+            background: rgba(25, 25, 25, 0.92);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        .window-header {
+            height: 35px;
+            background: rgba(40, 40, 40, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            cursor: move;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .window-title {
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .window-close {
+            background: #ff5f56;
+            border: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .window-body {
+            flex: 1;
+            padding: 15px;
+            color: #fff;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+
+        /* デスクトップアイコン群 */
+        #desktop-icons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .desk-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #fff;
+            font-size: 0.8rem;
+            text-align: center;
+            transition: background 0.2s;
+        }
+        .desk-icon:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .desk-icon span {
+            margin-top: 5px;
+        }
+
+        /* ストア要素 */
+        .store-item, .url-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .store-item button, .url-item button {
+            background: #00ffcc;
+            color: #000;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
 
-  <div id="game-container">
-    <div id="scoreboard">
-      <div>
-        <div class="score-title">あなたの釣果</div>
-        <div class="score-value" id="my-score">0 匹</div>
-      </div>
-      <div>
-        <div class="score-title">みんなの合計</div>
-        <div class="score-value" id="global-score">0 匹</div>
-      </div>
+    <!-- 起動画面 -->
+    <div id="boot-screen">
+        <h1>seronreOS mini</h1>
+        <button id="boot-btn" onclick="startOS()">OSを起動する</button>
     </div>
 
-    <div id="leaderboard">
-      <h3>リアルタイム順位</h3>
-      <div id="leaderboard-list">まだ記録がありません</div>
+    <!-- デスクトップ画面 -->
+    <div id="desktop">
+        <!-- デスクトップアイコン -->
+        <div id="desktop-icons">
+            <div class="desk-icon" onclick="openWindow('app-store-win')">
+                <span style="font-size:1.5rem;">🛍️</span>
+                <span>アプリストア</span>
+            </div>
+            <div class="desk-icon" onclick="openWindow('url-store-win')">
+                <span style="font-size:1.5rem;">🌐</span>
+                <span>URLストア</span>
+            </div>
+            <div class="desk-icon" onclick="openWindow('memo-win')">
+                <span style="font-size:1.5rem;">📝</span>
+                <span>メモ帳</span>
+            </div>
+        </div>
+
+        <!-- アプリストア ウィンドウ -->
+        <div class="window" id="app-store-win">
+            <div class="window-header" onmousedown="startDrag(event, 'app-store-win')">
+                <span class="window-title">serorehen App Store</span>
+                <button class="window-close" onclick="closeWindow('app-store-win')"></button>
+            </div>
+            <div class="window-body">
+                <h3>公式アプリ一覧</h3>
+                <div class="store-item">
+                    <div>
+                        <strong>かんたんメモ</strong><br><small>標準のテキストメモツール</small>
+                    </div>
+                    <button onclick="alert('インストール済みです')">導入済</button>
+                </div>
+                <div class="store-item">
+                    <div>
+                        <strong>ポイントファクトリー</strong><br><small>ポイントを増やす</small>
+                    </div>
+                    <button onclick="addPoints(50)">ポイント獲得(+50)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- URLストア ウィンドウ -->
+        <div class="window" id="url-store-win">
+            <div class="window-header" onmousedown="startDrag(event, 'url-store-win')">
+                <span class="window-title">serorehen URL Store</span>
+                <button class="window-close" onclick="closeWindow('url-store-win')"></button>
+            </div>
+            <div class="window-body">
+                <h3>外部URL登録・購入 (所持ポイント: <span id="user-points">100</span> pt)</h3>
+                <div class="menu-section" style="margin-top:10px;">
+                    <label>URLのタイトル</label>
+                    <input type="text" id="new-url-title" placeholder="例: Apple公式サイト">
+                    <label>ウェブURL (https://...)</label>
+                    <input type="text" id="new-url-address" placeholder="https://www.apple.com/jp/">
+                    <button onclick="registerCustomUrl()">URLを登録 (50pt消費)</button>
+                </div>
+                <hr style="border-color:rgba(255,255,255,0.2); margin:15px 0;">
+                <h3 style="margin-bottom:10px;">登録済みURL一覧</h3>
+                <div id="registered-urls-list"></div>
+            </div>
+        </div>
+
+        <!-- メモ帳 ウィンドウ -->
+        <div class="window" id="memo-win">
+            <div class="window-header" onmousedown="startDrag(event, 'memo-win')">
+                <span class="window-title">メモ帳</span>
+                <button class="window-close" onclick="closeWindow('memo-win')"></button>
+            </div>
+            <div class="window-body">
+                <textarea style="width:100%; height:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:8px; resize:none;" placeholder="ここにメモを入力できます..."></textarea>
+            </div>
+        </div>
+
+        <!-- 外部URLブラウザ ウィンドウ（内部完結プロキシ表示対応） -->
+        <div class="window" id="browser-win">
+            <div class="window-header" onmousedown="startDrag(event, 'browser-win')">
+                <span class="window-title" id="browser-win-title">OS内ブラウザ</span>
+                <button class="window-close" onclick="closeWindow('browser-win')"></button>
+            </div>
+            <div class="window-body" style="padding:0; display:flex; flex-direction:column;">
+                <div style="background:#222; padding:5px; display:flex; align-items:center; gap:5px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                    <input type="text" id="browser-address-bar" readonly style="flex:1; background:#111; border:1px solid #444; color:#fff; padding:3px 6px; font-size:0.8rem; border-radius:3px;">
+                    <button onclick="reloadBrowserContent()" style="background:#444; color:#fff; border:none; padding:3px 8px; font-size:0.8rem; border-radius:3px; cursor:pointer;">更新</button>
+                </div>
+                <iframe id="browser-iframe" src="" style="width:100%; height:calc(100% - 32px); border:none; background:#fff;"></iframe>
+            </div>
+        </div>
+
+        <!-- タスクバー -->
+        <div id="taskbar">
+            <div class="taskbar-left">
+                <button class="tb-btn" onclick="toggleMenu('start-menu')">⚙️ 設定・背景</button>
+                <button class="tb-btn" onclick="openWindow('app-store-win')">🛍️️ ストア</button>
+            </div>
+            <div class="taskbar-right">
+                <span class="status-info" id="status-net">回線: 接続中</span>
+                <span class="status-info" id="status-sim">SIM: 有効</span>
+                <span class="status-info" id="clock">00:00</span>
+            </div>
+        </div>
+
+        <!-- 設定メニュー (背景・ネットワーク切替) -->
+        <div class="menu-popup" id="start-menu">
+            <h3>システム設定</h3>
+            <div class="menu-section">
+                <label>ネットワーク接続</label>
+                <select id="net-toggle" onchange="updateNetworkStatus()">
+                    <option value="on">インターネット接続 (ON)</option>
+                    <option value="off">インターネット切断 (OFF)</option>
+                </select>
+            </div>
+            <div class="menu-section">
+                <label>SIMカード状態</label>
+                <select id="sim-toggle" onchange="updateSimStatus()">
+                    <option value="on">SIMカード有効</option>
+                    <option value="off">SIMカード無効</option>
+                </select>
+            </div>
+            <div class="menu-section">
+                <label>デフォルト背景 (7種から選択)</label>
+                <select id="default-bg-select" onchange="changeDefaultBg()">
+                    <option value="https://images.unsplash.com/photo-1506744038136-46273834b3fb">自然の風景 1</option>
+                    <option value="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b">雪山・冬景色</option>
+                    <option value="https://images.unsplash.com/photo-1511497584788-87676119255a">神秘の森林</option>
+                    <option value="https://images.unsplash.com/photo-1507525428034-b723cf961d3e">美しい海・ビーチ</option>
+                    <option value="https://images.unsplash.com/photo-1519681393784-d120267933ba">夜空・星空</option>
+                    <option value="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05">緑豊かな草原</option>
+                    <option value="https://images.unsplash.com/photo-1534447677768-be436bb09401">宇宙・銀河</option>
+                </select>
+            </div>
+            <div class="menu-section">
+                <label>ウェブ画像URLで背景を変更</label>
+                <input type="text" id="custom-bg-url" placeholder="https://... などの画像URL">
+                <button onclick="applyCustomUrlBg()">URLの画像を適用</button>
+            </div>
+            <div class="menu-section">
+                <label>自分の保存画像 (ファイル選択)</label>
+                <input type="file" id="local-img-file" accept="image/*" onchange="applyLocalFileBg(event)">
+            </div>
+        </div>
     </div>
 
-    <div id="pond"></div>
-  </div>
+    <script>
+        let points = 100;
+        let registeredUrls = [
+            { title: "サンプル検索", url: "https://www.google.com/search?igu=1" },
+            { title: "Apple公式サイト", url: "https://www.apple.com/jp/" }
+        ];
+        let currentTargetUrl = "";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { 
-      getFirestore, 
-      collection, 
-      addDoc, 
-      onSnapshot, 
-      query, 
-      orderBy, 
-      limit, 
-      serverTimestamp 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBSkY3xAd071fz0Jn23Fz1COnUt51Xzebg",
-      authDomain: "nnxe-29f42.firebaseapp.com",
-      projectId: "nnxe-29f42",
-      storageBucket: "nnxe-29f42.firebasestorage.app",
-      messagingSenderId: "1048000668049",
-      appId: "1:1048000668049:web:89d3eb41b9979c473f7a30",
-      measurementId: "G-C7738KS76M"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    let score = 0;
-    const playerId = "プレイヤー_" + Math.floor(Math.random() * 8999 + 1000);
-
-    const myScoreEl = document.getElementById('my-score');
-    const globalScoreEl = document.getElementById('global-score');
-    const leaderboardListEl = document.getElementById('leaderboard-list');
-    const pond = document.getElementById('pond');
-
-    // 1. リアルタイム受信
-    const scoresQuery = query(collection(db, "catch_logs"), orderBy("timestamp", "desc"), limit(100));
-    
-    onSnapshot(scoresQuery, (snapshot) => {
-      globalScoreEl.textContent = `${snapshot.size} 匹`;
-
-      const playerTotals = {};
-      snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.playerId) {
-          playerTotals[data.playerId] = (playerTotals[data.playerId] || 0) + 1;
+        // 起動処理
+        function startOS() {
+            document.getElementById('boot-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('boot-screen').style.display = 'none';
+                document.getElementById('desktop').style.display = 'block';
+                changeDefaultBg();
+            }, 800);
         }
-      });
 
-      const sorted = Object.entries(playerTotals).sort((a, b) => b[1] - a[1]).slice(0, 5);
-      
-      if (sorted.length === 0) {
-        leaderboardListEl.innerHTML = 'まだ記録がありません';
-      } else {
-        leaderboardListEl.innerHTML = sorted.map(([id, count], idx) => `
-          <div class="leader-item">
-            <span>${idx + 1}. ${id === playerId ? '★あなた' : id}</span>
-            <span><b>${count}</b> 匹</span>
-          </div>
-        `).join('');
-      }
-    });
+        // 時計更新
+        setInterval(() => {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').innerText = `${h}:${m}`;
+        }, 1000);
 
-    // 2. 魚（絵文字 🐟）の出現とクリック処理
-    function spawnNamazu() {
-      const namazu = document.createElement('div');
-      namazu.className = 'namazu';
-      namazu.textContent = '🐟'; // 魚の絵文字を表示
-
-      const maxX = pond.clientWidth - 80;
-      const maxY = pond.clientHeight - 80;
-      const x = Math.max(20, Math.floor(Math.random() * maxX));
-      const y = Math.max(100, Math.floor(Math.random() * maxY));
-
-      namazu.style.left = `${x}px`;
-      namazu.style.top = `${y}px`;
-
-      namazu.addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-        createRipple(e.clientX, e.clientY);
-        
-        score++;
-        myScoreEl.textContent = `${score} 匹`;
-
-        addDoc(collection(db, "catch_logs"), {
-          playerId: playerId,
-          timestamp: serverTimestamp()
-        });
-
-        namazu.remove();
-        setTimeout(spawnNamazu, 600);
-      });
-
-      pond.appendChild(namazu);
-
-      setTimeout(() => {
-        if (namazu.parentElement) {
-          namazu.remove();
-          spawnNamazu();
+        // メニュー開閉
+        function toggleMenu(id) {
+            const menu = document.getElementById(id);
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
         }
-      }, 4000);
-    }
 
-    function createRipple(x, y) {
-      const ripple = document.createElement('div');
-      ripple.className = 'ripple';
-      ripple.style.left = `${x}px`;
-      ripple.style.top = `${y}px`;
-      document.body.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
-    }
+        // デフォルト背景変更 (7種)
+        function changeDefaultBg() {
+            const url = document.getElementById('default-bg-select').value;
+            document.getElementById('desktop').style.backgroundImage = `url('${url}')`;
+        }
 
-    spawnNamazu();
-    spawnNamazu();
-  </script>
+        // ウェブURL背景適用
+        function applyCustomUrlBg() {
+            const url = document.getElementById('custom-bg-url').value.trim();
+            if (url) {
+                document.getElementById('desktop').style.backgroundImage = `url('${url}')`;
+                alert('背景画像を適用しました！');
+            } else {
+                alert('有効な画像URLを入力してください。');
+            }
+        }
+
+        // ローカルファイル背景適用
+        function applyLocalFileBg(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('desktop').style.backgroundImage = `url('${e.target.result}')`;
+                    alert('保存された画像を背景に設定しました！');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // ネットワーク・SIM状態管理
+        function updateNetworkStatus() {
+            const val = document.getElementById('net-toggle').value;
+            document.getElementById('status-net').innerText = val === 'on' ? '回線: 接続中' : '回線: 切断中';
+        }
+        function updateSimStatus() {
+            const val = document.getElementById('sim-toggle').value;
+            document.getElementById('status-sim').innerText = val === 'on' ? 'SIM: 有効' : 'SIM: 無効';
+        }
+
+        // ポイント追加
+        function addPoints(amt) {
+            points += amt;
+            document.getElementById('user-points').innerText = points;
+            alert(`${amt}ポイント獲得しました！`);
+        }
+
+        // URLストア登録
+        function registerCustomUrl() {
+            const title = document.getElementById('new-url-title').value.trim();
+            const url = document.getElementById('new-url-address').value.trim();
+            if (!title || !url) {
+                alert('タイトルとURLの両方を入力してください。');
+                return;
+            }
+            if (points < 50) {
+                alert('ポイントが足りません！ (必要: 50pt)');
+                return;
+            }
+            points -= 50;
+            document.getElementById('user-points').innerText = points;
+            registeredUrls.push({ title, url });
+            renderRegisteredUrls();
+            document.getElementById('new-url-title').value = '';
+            document.getElementById('new-url-address').value = '';
+            alert('新しいURLを登録しました！');
+        }
+
+        // 登録URL一覧描画
+        function renderRegisteredUrls() {
+            const list = document.getElementById('registered-urls-list');
+            list.innerHTML = '';
+            registeredUrls.forEach((item) => {
+                list.innerHTML += `
+                    <div class="url-item">
+                        <div><strong>${item.title}</strong><br><small style="color:#aaa;">${item.url}</small></div>
+                        <button onclick="launchBrowser('${item.url}', '${item.title}')">起動</button>
+                    </div>
+                `;
+            });
+        }
+        renderRegisteredUrls();
+
+        // 外部URLブラウザ起動（OS内完結プロキシ・フォールバック対応）
+        function launchBrowser(url, title) {
+            currentTargetUrl = url;
+            document.getElementById('browser-win-title').innerText = title;
+            document.getElementById('browser-address-bar').value = url;
+            
+            const iframe = document.getElementById('browser-iframe');
+            // X-Frame-Optionsで弾かれるサイト（Apple等）もOS内で安全に表示させるため、プロキシ経由または直接埋め込みを試行
+            if (url.includes('google.com')) {
+                iframe.src = url;
+            } else {
+                // 一般的なサイトをプロキシサービス経由でOS内ウィンドウに完全にインライン表示させる仕組み
+                iframe.src = `https://r.jina.ai/` + url; 
+            }
+            openWindow('browser-win');
+        }
+
+        function reloadBrowserContent() {
+            if (currentTargetUrl) {
+                launchBrowser(currentTargetUrl, document.getElementById('browser-win-title').innerText);
+            }
+        }
+
+        // ウィンドウ管理 (最大5個同時起動、ドラッグ移動対応)
+        let activeWindowsCount = 0;
+        function openWindow(id) {
+            const win = document.getElementById(id);
+            if (win.style.display !== 'flex') {
+                if (activeWindowsCount >= 5) {
+                    alert('同時に開けるウィンドウは最大5個までです。');
+                    return;
+                }
+                win.style.display = 'flex';
+                activeWindowsCount++;
+            }
+            win.style.zIndex = 100 + activeWindowsCount;
+        }
+
+        function closeWindow(id) {
+            const win = document.getElementById(id);
+            if (win.style.display === 'flex') {
+                win.style.display = 'none';
+                activeWindowsCount--;
+                if (id === 'browser-win') {
+                    document.getElementById('browser-iframe').src = '';
+                }
+            }
+        }
+
+        // ドラッグ移動ロジック
+        let draggingWin = null;
+        let offsetX = 0, offsetY = 0;
+
+        function startDrag(e, id) {
+            draggingWin = document.getElementById(id);
+            offsetX = e.clientX - draggingWin.offsetLeft;
+            offsetY = e.clientY - draggingWin.offsetTop;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function onDrag(e) {
+            if (!draggingWin) return;
+            draggingWin.style.left = (e.clientX - offsetX) + 'px';
+            draggingWin.style.top = (e.clientY - offsetY) + 'px';
+        }
+
+        function stopDrag() {
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            draggingWin = null;
+        }
+    </script>
 </body>
 </html>
