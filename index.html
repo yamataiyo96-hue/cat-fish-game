@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ねこと一緒！同時プレイ・フィッシングポンド</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #020b10;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .glass {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .animate-bounce-fast {
+            animation: bounceFast 0.4s infinite alternate;
+        }
+        @keyframes bounceFast {
+            from { transform: translateY(0) scale(1); }
+            to { transform: translateY(-10px) scale(1.05); }
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden select-none">
+
+    <!-- Game Canvas -->
+    <canvas id="pondCanvas"></canvas>
+
+    <!-- Top Overlay Bar (Dual Score & Dashboard) -->
+    <div id="topBar" class="absolute top-3 right-3 left-3 flex justify-between items-center pointer-events-none z-10 transition-opacity duration-300">
+        
+        <!-- Dual Score Display -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <!-- Human Fishing Score -->
+            <button id="bucketBtn" class="glass text-amber-300 px-3.5 py-2 rounded-2xl flex items-center gap-2 shadow-xl hover:bg-slate-800 transition border border-amber-500/30">
+                <i data-lucide="fish" class="w-5 h-5 text-amber-400"></i>
+                <div class="text-left leading-tight">
+                    <div class="text-[9px] uppercase tracking-wider text-amber-400 font-bold">人間（釣り）</div>
+                    <div id="humanScoreDisplay" class="text-xs sm:text-sm font-black text-white">0 匹</div>
+                </div>
+            </button>
+
+            <!-- Cat Paw Counter -->
+            <div class="glass text-cyan-300 px-3.5 py-2 rounded-2xl flex items-center gap-2 shadow-xl border border-cyan-500/30">
+                <i data-lucide="paw-print" class="w-5 h-5 text-cyan-400"></i>
+                <div class="text-left leading-tight">
+                    <div class="text-[9px] uppercase tracking-wider text-cyan-400 font-bold">ねこ（パシパシ）</div>
+                    <div id="catScoreDisplay" class="text-xs sm:text-sm font-black text-white">0 回</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Controls (Cat Lock Protected) -->
+        <div id="controlButtons" class="flex gap-2 pointer-events-auto">
+            <button id="catLockBtn" title="キャットロック（長押しで解除）" class="glass text-white p-2.5 rounded-2xl hover:bg-slate-700/60 active:scale-95 transition">
+                <i data-lucide="lock" id="lockIcon" class="w-5 h-5 text-cyan-300"></i>
+            </button>
+            <button id="fullscreenBtn" title="全画面表示" class="glass text-white p-2.5 rounded-2xl hover:bg-slate-700/60 active:scale-95 transition">
+                <i data-lucide="maximize" class="w-5 h-5 text-cyan-300"></i>
+            </button>
+            <button id="settingsBtn" title="設定" class="glass text-white p-2.5 rounded-2xl hover:bg-slate-700/60 active:scale-95 transition">
+                <i data-lucide="settings" class="w-5 h-5 text-cyan-300"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Human Cast / Reel Control Floating HUD -->
+    <div id="humanHud" class="absolute bottom-6 right-6 pointer-events-auto z-20 flex flex-col items-end gap-2">
+        <button id="castReelBtn" class="glass bg-amber-500/80 hover:bg-amber-500 text-slate-950 font-black px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-3 border-2 border-amber-300 active:scale-90 transition transform">
+            <i data-lucide="anchor" class="w-6 h-6"></i>
+            <span id="castBtnText" class="text-sm sm:text-base">仕掛けを投げる</span>
+        </button>
+    </div>
+
+    <!-- FISH BITE / HIT ALERT -->
+    <div id="fishingAlert" class="hidden absolute top-20 left-1/2 -translate-x-1/2 pointer-events-none z-30 flex flex-col items-center">
+        <div class="bg-red-500/90 text-white font-black px-6 py-2.5 rounded-full text-base sm:text-lg shadow-2xl animate-bounce-fast border-2 border-amber-300 flex items-center gap-2">
+            <i data-lucide="zap" class="w-6 h-6 text-yellow-300 fill-yellow-300"></i>
+            <span>HIT! 猫にジャマされる前にリールを巻け！</span>
+        </div>
+    </div>
+
+    <!-- Cat Startled Fish Floating Text Indicator -->
+    <div id="startledNotice" class="hidden absolute top-32 left-1/2 -translate-x-1/2 pointer-events-none z-30 bg-cyan-900/90 text-cyan-200 px-4 py-1.5 rounded-full text-xs font-bold border border-cyan-400">
+        🐾 猫ちゃんが魚を驚かせて逃がしてしまった！
+    </div>
+
+    <!-- Lock Active Warning -->
+    <div id="lockNotice" class="hidden absolute top-5 left-1/2 -translate-x-1/2 glass text-cyan-200 px-5 py-2 rounded-full text-xs font-medium z-20 shadow-2xl flex items-center gap-2 border border-amber-400/50">
+        <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
+        <span>キャットロック有効中（解除はロックアイコンを長押し）</span>
+    </div>
+
+    <!-- Catch Celebration Modal -->
+    <div id="catchModal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass max-w-sm w-full rounded-3xl p-6 text-center text-white shadow-2xl space-y-4 border-2 border-amber-400/50 relative">
+            <div class="text-amber-400 text-xs font-extrabold tracking-widest uppercase">Great Catch!</div>
+            <div id="caughtFishTitle" class="text-2xl font-black text-cyan-300">錦鯉 (42cm)</div>
+            <div class="py-2 flex justify-center">
+                <div class="w-28 h-28 rounded-full bg-cyan-950/80 border-2 border-cyan-400/40 flex items-center justify-center text-5xl shadow-inner">
+                    🐟
+                </div>
+            </div>
+            <p id="caughtFishDesc" class="text-xs text-slate-300">猫ちゃんの攻撃をくぐり抜けてゲット！</p>
+            <button id="keepFishBtn" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl text-sm font-black shadow-lg transition">
+                バケツに入れる（池に戻す）
+            </button>
+        </div>
+    </div>
+
+    <!-- Catch Bucket Modal -->
+    <div id="bucketModal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="glass max-w-md w-full rounded-3xl p-6 text-white shadow-2xl space-y-4 border border-cyan-500/30">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h2 class="text-lg font-bold flex items-center gap-2 text-cyan-300">
+                    <i data-lucide="shopping-bag" class="w-5 h-5"></i> 釣果 & 猫ちゃん成果記録
+                </h2>
+                <button id="closeBucketBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="bucketList" class="max-h-60 overflow-y-auto space-y-2 pr-1">
+                <!-- Dynamic Items -->
+            </div>
+            <button id="clearBucketBtn" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-xs transition">
+                記録をリセット
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="glass max-w-md w-full rounded-3xl p-6 text-white shadow-2xl space-y-5 border border-cyan-500/30">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h2 class="text-lg font-bold flex items-center gap-2 text-cyan-300">
+                    <i data-lucide="sliders" class="w-5 h-5"></i> 池と魚の設定
+                </h2>
+                <button id="closeSettingsBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Theme -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2">池のテーマ</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button class="pond-theme-btn p-2 rounded-xl border border-cyan-500 bg-cyan-950/60 text-xs font-medium text-center" data-theme="japanese">
+                            日本の池
+                        </button>
+                        <button class="pond-theme-btn p-2 rounded-xl border border-slate-700 bg-slate-800/40 text-xs font-medium text-center" data-theme="tropical">
+                            南国の海
+                        </button>
+                        <button class="pond-theme-btn p-2 rounded-xl border border-slate-700 bg-slate-800/40 text-xs font-medium text-center" data-theme="deep">
+                            深緑の清流
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Fish Count -->
+                <div>
+                    <div class="flex justify-between text-xs font-medium mb-1">
+                        <span class="text-slate-300">魚の数</span>
+                        <span id="fishCountVal" class="text-cyan-400 font-bold">10匹</span>
+                    </div>
+                    <input type="range" id="fishCountSlider" min="3" max="25" value="10" class="w-full accent-cyan-400 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Fish Speed -->
+                <div>
+                    <div class="flex justify-between text-xs font-medium mb-1">
+                        <span class="text-slate-300">魚の泳ぐ速さ</span>
+                        <span id="fishSpeedVal" class="text-cyan-400 font-bold">標準</span>
+                    </div>
+                    <input type="range" id="fishSpeedSlider" min="1" max="3" step="0.5" value="1.5" class="w-full accent-cyan-400 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Sound Toggle -->
+                <div class="flex justify-between items-center py-2 border-t border-slate-700">
+                    <div>
+                        <div class="text-xs font-medium text-slate-200">効果音</div>
+                        <div class="text-[10px] text-slate-400">水しぶき音・ヒット音・巻き上げ音</div>
+                    </div>
+                    <button id="soundToggle" class="w-11 h-6 bg-cyan-600 rounded-full p-1 transition flex items-center">
+                        <div id="soundToggleKnob" class="w-4 h-4 bg-white rounded-full translate-x-5 transition transform"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Web Audio Synthetic Sound Generator ---
+        class WaterAudioSynthesizer {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playSplash(volume = 0.8) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const bufferSize = this.ctx.sampleRate * 0.12;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(800 + Math.random() * 400, now);
+                filter.frequency.exponentialRampToValueAtTime(150, now + 0.1);
+                filter.Q.value = 3;
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.4 * volume, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start(now);
+            }
+
+            playHitAlert() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(520, now);
+                osc.frequency.exponentialRampToValueAtTime(1040, now + 0.15);
+
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.18);
+            }
+
+            playReelCatch() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.setValueAtTime(600, now + 0.1);
+                osc.frequency.setValueAtTime(900, now + 0.2);
+
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+        }
+
+        const audio = new WaterAudioSynthesizer();
+
+        // Canvas Setup
+        const canvas = document.getElementById('pondCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        // App Game State
+        const state = {
+            pondTheme: 'japanese',
+            fishCount: 10,
+            speedMultiplier: 1.5,
+            isLocked: false,
+            soundEnabled: true,
+            
+            // Scores
+            humanCaughtCount: 0,
+            catPawCount: 0,
+            catchHistory: [],
+
+            // Fishing Hook State
+            hook: {
+                active: false,
+                x: width / 2,
+                y: height / 2,
+                bitingFish: null,
+                isBiting: false,
+                biteTimeout: null
+            }
+        };
+
+        const FISH_STYLES = {
+            koi_kohaku: { name: '紅白錦鯉', body: '#F4F4F0', spots: ['#E63946', '#D62828'], fin: 'rgba(255,255,255,0.7)', scale: 1.25 },
+            koi_sanke: { name: '三色錦鯉', body: '#F4F4F0', spots: ['#E63946', '#1D3557'], fin: 'rgba(255,255,255,0.7)', scale: 1.3 },
+            koi_yamabuki: { name: '山吹黄金鯉', body: '#FFB703', spots: ['#FB8500'], fin: 'rgba(255,220,100,0.8)', scale: 1.2 },
+            goldfish_red: { name: '和金', body: '#FF4500', spots: ['#FF6B35'], fin: 'rgba(255,100,50,0.75)', scale: 0.95 },
+            goldfish_black: { name: '出目金', body: '#222222', spots: ['#111111'], fin: 'rgba(50,50,50,0.8)', scale: 0.9 },
+            tropical_blue: { name: 'ネオン熱帯魚', body: '#00B4D8', spots: ['#90E0EF', '#03045E'], fin: 'rgba(144,224,239,0.8)', scale: 0.85 }
+        };
+
+        class Fish {
+            constructor() {
+                this.reset();
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+            }
+
+            reset() {
+                const keys = Object.keys(FISH_STYLES);
+                this.styleKey = keys[Math.floor(Math.random() * keys.length)];
+                this.style = FISH_STYLES[this.styleKey];
+
+                this.size = (Math.random() * 10 + 26) * this.style.scale;
+                this.lengthCm = Math.floor(this.size * 1.25 + Math.random() * 6);
+
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.angle = Math.atan2(this.vy, this.vx);
+
+                this.maxSpeed = 1.8 * state.speedMultiplier;
+                this.fleeSpeed = 8.0 * state.speedMultiplier;
+                this.currentMaxSpeed = this.maxSpeed;
+
+                this.tailPhase = Math.random() * Math.PI * 2;
+                this.targetX = Math.random() * width;
+                this.targetY = Math.random() * height;
+                this.changeTargetTimer = 0;
+                this.isFleeing = false;
+                this.isAttractedToHook = false;
+            }
+
+            update() {
+                if (this.currentMaxSpeed > this.maxSpeed) {
+                    this.currentMaxSpeed -= 0.2;
+                    if (this.currentMaxSpeed < this.maxSpeed) {
+                        this.currentMaxSpeed = this.maxSpeed;
+                        this.isFleeing = false;
+                    }
+                }
+
+                // AI Steering towards Human Hook if active
+                if (state.hook.active && !this.isFleeing) {
+                    const distToHook = Math.hypot(state.hook.x - this.x, state.hook.y - this.y);
+                    if (distToHook < 260) {
+                        this.targetX = state.hook.x;
+                        this.targetY = state.hook.y;
+                        this.isAttractedToHook = true;
+
+                        // Check for Bite
+                        if (distToHook < 22 && !state.hook.isBiting && !state.hook.bitingFish) {
+                            triggerFishBite(this);
+                        }
+                    } else {
+                        this.isAttractedToHook = false;
+                    }
+                } else {
+                    this.isAttractedToHook = false;
+                }
+
+                if (!this.isAttractedToHook) {
+                    this.changeTargetTimer++;
+                    if (this.changeTargetTimer > 160 || Math.hypot(this.targetX - this.x, this.targetY - this.y) < 40) {
+                        this.targetX = Math.random() * (width - 100) + 50;
+                        this.targetY = Math.random() * (height - 100) + 50;
+                        this.changeTargetTimer = 0;
+                    }
+                }
+
+                const angleToTarget = Math.atan2(this.targetY - this.y, this.targetX - this.x);
+                let angleDiff = angleToTarget - this.angle;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+
+                const turnRate = this.isAttractedToHook ? 0.09 : 0.04;
+                this.angle += angleDiff * turnRate;
+
+                const speed = this.isFleeing ? this.currentMaxSpeed : (this.isAttractedToHook ? this.maxSpeed * 0.75 : this.maxSpeed * 0.85);
+                this.vx = Math.cos(this.angle) * speed;
+                this.vy = Math.sin(this.angle) * speed;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wall Bounds
+                const margin = 40;
+                if (this.x < margin) { this.x = margin; this.angle = Math.PI - this.angle; }
+                if (this.x > width - margin) { this.x = width - margin; this.angle = Math.PI - this.angle; }
+                if (this.y < margin) { this.y = margin; this.angle = -this.angle; }
+                if (this.y > height - margin) { this.y = height - margin; this.angle = -this.angle; }
+
+                this.tailPhase += this.isFleeing ? 0.5 : 0.16;
+            }
+
+            fleeFrom(touchX, touchY) {
+                const dist = Math.hypot(touchX - this.x, touchY - this.y);
+                if (dist < 220) {
+                    this.angle = Math.atan2(this.y - touchY, this.x - touchX) + (Math.random() - 0.5) * 0.4;
+                    this.currentMaxSpeed = this.fleeSpeed;
+                    this.isFleeing = true;
+                    this.targetX = this.x + Math.cos(this.angle) * 350;
+                    this.targetY = this.y + Math.sin(this.angle) * 350;
+
+                    // If this fish was biting the hook, cat tap startles it away!
+                    if (state.hook.isBiting && state.hook.bitingFish === this) {
+                        cancelBiteDueToCat(touchX, touchY);
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Shadow
+                ctx.save();
+                ctx.translate(16, 22);
+                ctx.scale(1, 0.55);
+                ctx.fillStyle = 'rgba(2, 10, 20, 0.35)';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size, this.size * 0.35, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // Fins
+                const finWiggle = Math.sin(this.tailPhase) * 0.18;
+                ctx.fillStyle = this.style.fin;
+
+                ctx.save();
+                ctx.translate(-this.size * 0.1, -this.size * 0.22);
+                ctx.rotate(-Math.PI / 4 + finWiggle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 0.38, this.size * 0.18, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(-this.size * 0.1, this.size * 0.22);
+                ctx.rotate(Math.PI / 4 - finWiggle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 0.38, this.size * 0.18, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // Tail
+                const tailAngle = Math.sin(this.tailPhase) * 0.38;
+                ctx.save();
+                ctx.translate(-this.size * 0.8, 0);
+                ctx.rotate(tailAngle);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(-this.size * 0.5, -this.size * 0.4, -this.size * 0.8, -this.size * 0.3);
+                ctx.quadraticCurveTo(-this.size * 0.6, 0, -this.size * 0.8, this.size * 0.3);
+                ctx.quadraticCurveTo(-this.size * 0.5, this.size * 0.4, 0, 0);
+                ctx.fill();
+                ctx.restore();
+
+                // Body
+                ctx.fillStyle = this.style.body;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 0.85, this.size * 0.32, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pattern
+                if (this.style.spots && this.style.spots[0]) {
+                    ctx.fillStyle = this.style.spots[0];
+                    ctx.beginPath();
+                    ctx.ellipse(-this.size * 0.1, -this.size * 0.05, this.size * 0.35, this.size * 0.2, 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Eyes
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.55, -this.size * 0.14, this.size * 0.08, 0, Math.PI * 2);
+                ctx.arc(this.size * 0.55, this.size * 0.14, this.size * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#0B0F19';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.57, -this.size * 0.14, this.size * 0.05, 0, Math.PI * 2);
+                ctx.arc(this.size * 0.57, this.size * 0.14, this.size * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // Initialize Fish Array
+        let fishes = [];
+        function initFishes() {
+            fishes = [];
+            for (let i = 0; i < state.fishCount; i++) fishes.push(new Fish());
+        }
+        initFishes();
+
+        // Water Ripples & Paw Print Animations
+        const ripples = [];
+        const pawPrints = [];
+
+        function createRipple(x, y, isBig = false) {
+            ripples.push({
+                x, y,
+                radius: isBig ? 12 : 5,
+                maxRadius: isBig ? 140 : 80,
+                alpha: 0.85,
+                speed: isBig ? 3.5 : 2.2
+            });
+        }
+
+        function createPawPrint(x, y) {
+            pawPrints.push({
+                x, y,
+                alpha: 0.7,
+                scale: 0.8 + Math.random() * 0.4
+            });
+        }
+
+        // Trigger Fish Bite (HIT)
+        function triggerFishBite(fish) {
+            state.hook.isBiting = true;
+            state.hook.bitingFish = fish;
+            audio.playHitAlert();
+
+            document.getElementById('fishingAlert').classList.remove('hidden');
+
+            // Timeout bite after 2.2s if not reeled in
+            state.hook.biteTimeout = setTimeout(() => {
+                if (state.hook.isBiting) {
+                    state.hook.isBiting = false;
+                    state.hook.bitingFish = null;
+                    document.getElementById('fishingAlert').classList.add('hidden');
+                    createRipple(state.hook.x, state.hook.y, true);
+                    audio.playSplash(1.2);
+                }
+            }, 2200);
+        }
+
+        // Cat cancels fish bite by tapping near hook!
+        function cancelBiteDueToCat(touchX, touchY) {
+            if (state.hook.isBiting) {
+                clearTimeout(state.hook.biteTimeout);
+                state.hook.isBiting = false;
+                state.hook.bitingFish = null;
+                document.getElementById('fishingAlert').classList.add('hidden');
+
+                const notice = document.getElementById('startledNotice');
+                notice.classList.remove('hidden');
+                setTimeout(() => notice.classList.add('hidden'), 2000);
+
+                createRipple(touchX, touchY, true);
+                audio.playSplash(1.5);
+            }
+        }
+
+        // --- Simultaneous Touch & Paw Handling ---
+        function registerCatTouch(x, y) {
+            state.catPawCount++;
+            document.getElementById('catScoreDisplay').innerText = `${state.catPawCount} 回`;
+
+            audio.playSplash(0.7);
+            createRipple(x, y, false);
+            createPawPrint(x, y);
+
+            // Make nearby fish flee
+            fishes.forEach(f => f.fleeFrom(x, y));
+        }
+
+        // Direct Touch Handlers (Supports Multi-Touch)
+        window.addEventListener('touchstart', (e) => {
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                // If touch is on canvas (not on HUD buttons)
+                if (target === canvas) {
+                    registerCatTouch(touch.clientX, touch.clientY);
+                }
+            }
+        }, { passive: true });
+
+        // Mouse click support for PC
+        canvas.addEventListener('mousedown', (e) => {
+            registerCatTouch(e.clientX, e.clientY);
+        });
+
+        // --- Human Cast / Reel Button Handlers ---
+        const castReelBtn = document.getElementById('castReelBtn');
+        const castBtnText = document.getElementById('castBtnText');
+
+        castReelBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            if (state.hook.isBiting && state.hook.bitingFish) {
+                // REEL IN SUCCESS!
+                clearTimeout(state.hook.biteTimeout);
+                const caught = state.hook.bitingFish;
+
+                state.hook.active = false;
+                state.hook.isBiting = false;
+                state.hook.bitingFish = null;
+                document.getElementById('fishingAlert').classList.add('hidden');
+
+                audio.playReelCatch();
+                state.humanCaughtCount++;
+                document.getElementById('humanScoreDisplay').innerText = `${state.humanCaughtCount} 匹`;
+
+                showCatchCelebration(caught);
+                castBtnText.innerText = '仕掛けを投げる';
+            } else if (!state.hook.active) {
+                // CAST LINE
+                state.hook.active = true;
+                state.hook.x = width / 2 + (Math.random() - 0.5) * (width * 0.4);
+                state.hook.y = height / 2 + (Math.random() - 0.5) * (height * 0.4);
+
+                createRipple(state.hook.x, state.hook.y, true);
+                audio.playSplash(0.9);
+                castBtnText.innerText = '仕掛けを引く';
+            } else {
+                // REEL IN EMPTY
+                state.hook.active = false;
+                state.hook.isBiting = false;
+                state.hook.bitingFish = null;
+                document.getElementById('fishingAlert').classList.add('hidden');
+                castBtnText.innerText = '仕掛けを投げる';
+            }
+        });
+
+        function showCatchCelebration(fish) {
+            document.getElementById('caughtFishTitle').innerText = `${fish.style.name} (${fish.lengthCm}cm)`;
+            document.getElementById('catchModal').classList.remove('hidden');
+
+            state.catchHistory.push({
+                name: fish.style.name,
+                length: fish.lengthCm,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+
+            fish.reset();
+        }
+
+        document.getElementById('keepFishBtn').addEventListener('click', () => {
+            document.getElementById('catchModal').classList.add('hidden');
+        });
+
+        function updateBucketUI() {
+            const bucketList = document.getElementById('bucketList');
+            let html = `
+                <div class="p-3 bg-cyan-950/60 rounded-2xl border border-cyan-500/30 flex justify-between items-center mb-3">
+                    <span class="text-xs text-slate-300 font-bold">ねこちゃんのパシパシ総数</span>
+                    <span class="text-sm font-black text-cyan-300">${state.catPawCount} 回</span>
+                </div>
+            `;
+
+            if (state.catchHistory.length === 0) {
+                html += `<p class="text-center text-xs text-slate-400 py-6">まだ魚を釣っていません。</p>`;
+            } else {
+                html += state.catchHistory.map((item, idx) => `
+                    <div class="flex justify-between items-center p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="text-amber-400 font-bold">#${idx + 1}</span>
+                            <span class="font-bold text-white">${item.name}</span>
+                        </div>
+                        <div class="text-slate-300">${item.length} cm <span class="text-[10px] text-slate-500">(${item.time})</span></div>
+                    </div>
+                `).join('');
+            }
+            bucketList.innerHTML = html;
+        }
+
+        document.getElementById('clearBucketBtn').addEventListener('click', () => {
+            state.catchHistory = [];
+            state.catPawCount = 0;
+            state.humanCaughtCount = 0;
+            document.getElementById('catScoreDisplay').innerText = '0 回';
+            document.getElementById('humanScoreDisplay').innerText = '0 匹';
+            updateBucketUI();
+        });
+
+        // --- Render Loop ---
+        function animate() {
+            // Draw Background Theme
+            if (state.pondTheme === 'japanese') {
+                const grad = ctx.createRadialGradient(width/2, height/2, 80, width/2, height/2, Math.max(width, height));
+                grad.addColorStop(0, '#0a3a40');
+                grad.addColorStop(0.7, '#05232d');
+                grad.addColorStop(1, '#021118');
+                ctx.fillStyle = grad;
+            } else if (state.pondTheme === 'tropical') {
+                const grad = ctx.createRadialGradient(width/2, height/2, 80, width/2, height/2, Math.max(width, height));
+                grad.addColorStop(0, '#0077b6');
+                grad.addColorStop(0.7, '#023e8a');
+                grad.addColorStop(1, '#03045e');
+                ctx.fillStyle = grad;
+            } else {
+                const grad = ctx.createRadialGradient(width/2, height/2, 80, width/2, height/2, Math.max(width, height));
+                grad.addColorStop(0, '#134e4a');
+                grad.addColorStop(0.7, '#064e3b');
+                grad.addColorStop(1, '#022c22');
+                ctx.fillStyle = grad;
+            }
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Fish
+            fishes.forEach(f => {
+                f.update();
+                f.draw(ctx);
+            });
+
+            // Draw Human Hook / Bobber
+            if (state.hook.active) {
+                // Line
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(width / 2, 0);
+                ctx.lineTo(state.hook.x, state.hook.y);
+                ctx.stroke();
+
+                // Bobber Animation
+                const bobY = state.hook.y + (state.hook.isBiting ? Math.sin(Date.now() * 0.03) * 7 : Math.sin(Date.now() * 0.005) * 2);
+                ctx.fillStyle = state.hook.isBiting ? '#EF4444' : '#F97316';
+                ctx.beginPath();
+                ctx.arc(state.hook.x, bobY, 9, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(state.hook.x, bobY - 4, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw Paw Prints
+            for (let i = pawPrints.length - 1; i >= 0; i--) {
+                const p = pawPrints[i];
+                p.alpha -= 0.012;
+                if (p.alpha <= 0) { pawPrints.splice(i, 1); continue; }
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.scale(p.scale, p.scale);
+                ctx.fillStyle = `rgba(56, 189, 248, ${p.alpha})`;
+
+                // Main pad
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 10, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Toe pads
+                const toes = [[-9, -10], [-3, -13], [3, -13], [9, -10]];
+                toes.forEach(([tx, ty]) => {
+                    ctx.beginPath();
+                    ctx.arc(tx, ty, 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.restore();
+            }
+
+            // Draw Ripples
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                const r = ripples[i];
+                r.radius += r.speed;
+                r.alpha -= 0.015;
+                if (r.alpha <= 0) { ripples.splice(i, 1); continue; }
+
+                ctx.strokeStyle = `rgba(180, 240, 255, ${r.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Modals & Controls
+        const settingsModal = document.getElementById('settingsModal');
+        const bucketModal = document.getElementById('bucketModal');
+
+        document.getElementById('settingsBtn').addEventListener('click', () => settingsModal.classList.remove('hidden'));
+        document.getElementById('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.add('hidden'));
+
+        document.getElementById('bucketBtn').addEventListener('click', () => {
+            updateBucketUI();
+            bucketModal.classList.remove('hidden');
+        });
+        document.getElementById('closeBucketBtn').addEventListener('click', () => bucketModal.classList.add('hidden'));
+
+        // Theme Switch
+        document.querySelectorAll('.pond-theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.pond-theme-btn').forEach(b => {
+                    b.classList.remove('border-cyan-500', 'bg-cyan-950/60');
+                    b.classList.add('border-slate-700', 'bg-slate-800/40');
+                });
+                btn.classList.add('border-cyan-500', 'bg-cyan-950/60');
+                btn.classList.remove('border-slate-700', 'bg-slate-800/40');
+                state.pondTheme = btn.dataset.theme;
+            });
+        });
+
+        // Sliders
+        document.getElementById('fishCountSlider').addEventListener('input', (e) => {
+            state.fishCount = parseInt(e.target.value);
+            document.getElementById('fishCountVal').innerText = `${state.fishCount}匹`;
+            initFishes();
+        });
+
+        document.getElementById('fishSpeedSlider').addEventListener('input', (e) => {
+            state.speedMultiplier = parseFloat(e.target.value);
+            initFishes();
+        });
+
+        // Sound Toggle
+        document.getElementById('soundToggle').addEventListener('click', () => {
+            state.soundEnabled = !state.soundEnabled;
+            audio.enabled = state.soundEnabled;
+            document.getElementById('soundToggleKnob').classList.toggle('translate-x-5');
+        });
+
+        // Fullscreen
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // Cat Lock
+        const catLockBtn = document.getElementById('catLockBtn');
+        const controlButtons = document.getElementById('controlButtons');
+        const lockNotice = document.getElementById('lockNotice');
+        let lockTimer = null;
+
+        catLockBtn.addEventListener('click', () => {
+            if (!state.isLocked) {
+                state.isLocked = true;
+                controlButtons.classList.add('opacity-30');
+                lockNotice.classList.remove('hidden');
+            }
+        });
+
+        const unlock = () => {
+            if (state.isLocked) {
+                state.isLocked = false;
+                controlButtons.classList.remove('opacity-30');
+                lockNotice.classList.add('hidden');
+            }
+        };
+
+        catLockBtn.addEventListener('mousedown', () => { if (state.isLocked) lockTimer = setTimeout(unlock, 1200); });
+        catLockBtn.addEventListener('mouseup', () => clearTimeout(lockTimer));
+        catLockBtn.addEventListener('touchstart', () => { if (state.isLocked) lockTimer = setTimeout(unlock, 1200); });
+        catLockBtn.addEventListener('touchend', () => clearTimeout(lockTimer));
+
+        window.onload = () => {
+            lucide.createIcons();
+            animate();
+        };
+    </script>
+</body>
+</html>
