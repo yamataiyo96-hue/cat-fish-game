@@ -53,7 +53,7 @@
     }
     #leaderboard {
       position: absolute;
-      top: 85px; /* 上のバーと重ならないよう位置を調整 */
+      top: 85px;
       right: 15px;
       background: rgba(0, 0, 0, 0.6);
       padding: 12px;
@@ -80,27 +80,17 @@
       height: 100%;
       cursor: pointer;
     }
+    /* 魚の見た目を絵文字（🐟）に変更 */
     .namazu {
       position: absolute;
-      width: 80px;
-      height: 50px;
-      background: #4a3b32;
-      border-radius: 40px 20px 20px 40px;
-      transition: transform 0.2s ease;
+      font-size: 60px;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #ffcc00;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: transform 0.1s ease;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+      line-height: 1;
     }
-    .namazu::before {
-      content: '〜〜';
-      position: absolute;
-      left: -10px;
-      color: #ffcc00;
-      font-size: 10px;
+    .namazu:active {
+      transform: scale(1.2);
     }
     .ripple {
       position: absolute;
@@ -150,7 +140,6 @@
       serverTimestamp 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // ご自身のFirebase設定
     const firebaseConfig = {
       apiKey: "AIzaSyBSkY3xAd071fz0Jn23Fz1COnUt51Xzebg",
       authDomain: "nnxe-29f42.firebaseapp.com",
@@ -172,14 +161,12 @@
     const leaderboardListEl = document.getElementById('leaderboard-list');
     const pond = document.getElementById('pond');
 
-    // 1. リアルタイム受信 (誰かが釣るたびに「みんなの合計」と「順位」を即時更新)
+    // 1. リアルタイム受信
     const scoresQuery = query(collection(db, "catch_logs"), orderBy("timestamp", "desc"), limit(100));
     
     onSnapshot(scoresQuery, (snapshot) => {
-      // みんなの合計数
       globalScoreEl.textContent = `${snapshot.size} 匹`;
 
-      // プレイヤーごとの釣果を計算してランキング化
       const playerTotals = {};
       snapshot.docs.forEach(doc => {
         const data = doc.data();
@@ -202,14 +189,14 @@
       }
     });
 
-    // 2. ナマズの生成とクリック時の処理
+    // 2. 魚（絵文字 🐟）の出現とクリック処理
     function spawnNamazu() {
       const namazu = document.createElement('div');
       namazu.className = 'namazu';
-      namazu.textContent = 'ナマズ';
+      namazu.textContent = '🐟'; // 魚の絵文字を表示
 
-      const maxX = pond.clientWidth - 100;
-      const maxY = pond.clientHeight - 100;
+      const maxX = pond.clientWidth - 80;
+      const maxY = pond.clientHeight - 80;
       const x = Math.max(20, Math.floor(Math.random() * maxX));
       const y = Math.max(100, Math.floor(Math.random() * maxY));
 
@@ -220,11 +207,9 @@
         e.stopPropagation();
         createRipple(e.clientX, e.clientY);
         
-        // 自分のスコアをプラス
         score++;
         myScoreEl.textContent = `${score} 匹`;
 
-        // 釣った記録をリアルタイムでFirebaseへ保存
         addDoc(collection(db, "catch_logs"), {
           playerId: playerId,
           timestamp: serverTimestamp()
@@ -236,7 +221,6 @@
 
       pond.appendChild(namazu);
 
-      // 一定時間タップされないと消えて別の場所に出現
       setTimeout(() => {
         if (namazu.parentElement) {
           namazu.remove();
@@ -254,7 +238,6 @@
       setTimeout(() => ripple.remove(), 600);
     }
 
-    // ゲーム開始
     spawnNamazu();
     spawnNamazu();
   </script>
